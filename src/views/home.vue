@@ -14,6 +14,10 @@
 <script setup lang="ts">
 import HomeNav from '../components/homeNav.vue'
 import HomeMovie from './homeMovie.vue';
+import { reactive } from 'vue'
+const state = reactive({
+  
+})
 </script>
 
 
