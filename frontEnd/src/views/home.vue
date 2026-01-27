@@ -14,6 +14,19 @@
 <script setup lang="ts">
 import HomeNav from '../components/homeNav.vue'
 import HomeMovie from './homeMovie.vue';
+import { onMounted,reactive } from 'vue';
+import { AMap, getAddressByLngLat } from '../utils/amp';
+const state = reactive({
+  laln: '',//经纬度
+  position:'',//省市县
+});
+onMounted( async () => {
+  AMap();
+  state.laln = await getAddressByLngLat();
+  console.log('当前位置：',state.laln)
+  //把当前的城市存到缓存中
+  localStorage.setItem('position',state.laln.district|| state.laln.city||state.laln.province);
+});
 </script>
 
 

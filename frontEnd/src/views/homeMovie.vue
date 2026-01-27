@@ -93,9 +93,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { reactive, ref } from 'vue';
 import { onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
+
 
 interface Movie {
   id: number;
@@ -109,6 +110,7 @@ interface Movie {
 }
 
 const router = useRouter();
+
 const heroSlides = [
   {
     id: 1,
@@ -410,7 +412,7 @@ const handleCategoryClick = (cat: string) => {
   resetAndLoad();
 };
 
-onMounted(() => {
+onMounted( async () => {
   resetAndLoad();
 });
 </script>
