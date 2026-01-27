@@ -212,7 +212,7 @@ const goRegister = () => {
   height: 44px;
   border: none;
   border-radius: 8px;
-  background: #8ea8ff;
+  background: #4770fa;
   color: #ffffff;
   font-size: 14px;
   font-weight: 600;
@@ -221,7 +221,7 @@ const goRegister = () => {
 }
 
 .login-button:hover {
-  background: #7b99ff;
+  background: #5a80fc;
 }
 
 .login-divider {
