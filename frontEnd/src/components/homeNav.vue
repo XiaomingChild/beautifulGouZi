@@ -13,7 +13,7 @@
             fill="currentColor"
           />
         </svg>
-        <span class="loc-text">{{ state.position }}</span>
+        <span class="loc-text">{{ position }}</span>
       </div>
       <nav class="menu">
         <RouterLink to="/home" class="menu-link" active-class="is-active">首页</RouterLink>
@@ -30,22 +30,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, reactive } from 'vue';
+import { storeToRefs } from 'pinia';
 import { useRouter } from 'vue-router';
 import logoUrl from '../assets/logo.svg';
-
+import { usePosStore } from "../store/position";
+const posStore = usePosStore();
+const { position } = storeToRefs(posStore);
 const router = useRouter();
-const state = reactive({
-  position:'上海市'
-});
-
-
-onMounted(() => {
-  state.position = localStorage.getItem('position')
-});
-
-onUnmounted(() => {
-});
 
 const goHome = () => router.push('/home');
 const goLogin = () => router.push('/login');

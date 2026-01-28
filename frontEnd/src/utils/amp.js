@@ -1,6 +1,6 @@
 // amp.js
 import AMapLoader from "@amap/amap-jsapi-loader";
-
+import { usePosStore } from "../store/position";
 // 统一加载器，避免多次重复加载
 const loadAMap = () => {
     window._AMapSecurityConfig = {
@@ -14,22 +14,6 @@ const loadAMap = () => {
 };
 
 const GEO_CACHE_KEY = "geo";
-//用json的形式缓存经纬度
-const cacheLngLat = (lng, lat) => {
-    localStorage.setItem(GEO_CACHE_KEY, JSON.stringify({ lng, lat }));
-};
-const loadCachedLngLat = () => {
-    const raw = localStorage.getItem(GEO_CACHE_KEY);
-    if (!raw) return null;
-    try {
-        const { lng, lat } = JSON.parse(raw);
-        if (lng == null || lat == null) return null;
-        return { lng: parseFloat(lng), lat: parseFloat(lat) };
-    } catch {
-        return null;
-    }
-};
-
 export function AMap() {
     loadAMap().then((AMap) => {
         AMap.plugin("AMap.Geolocation", function () {
@@ -57,37 +41,12 @@ export function AMap() {
                 console.log("定位成功：", data);
                 // 缓存 lng/lat 备用
                 if (data?.position?.lng && data?.position?.lat) {
-                    cacheLngLat(data.position.lng, data.position.lat);
+                    getAddressByLngLat(data.position.lng, data.position.lat);
                 }
             }
             function onError(data) {
                 console.log(data);
                 // data是具体的定位信息
-
-                getCityInfo();// ip精准定位失败后获取城市定位（普通ip定位）
-            }
-            function getCityInfo() {
-                // ip精准定位失败后获取城市定位（普通ip定位）
-                geolocation.getCityInfo(function (status, result) {
-                    if (status == "complete") {
-                        onCityComplete(result);
-                    }
-                    if (status == "error") {
-                        onCityError(result);
-                    }
-                });
-                function onCityComplete(data) {
-                    console.log("城市定位成功数据：", data);
-                    // getCityInfo 返回城市级经纬度
-                    if (data?.position?.lng && data?.position?.lat) {
-                        cacheLngLat(data.position.lng, data.position.lat);
-                    }
-                }
-                function onCityError(data) {
-                    console.log("城市定位错误信息：", data);
-                    // data是具体的定位信息
-                    ElMessage.error(`获取定位失败，失败原因：${data.message}`);
-                }
             }
         });
     });
@@ -97,10 +56,6 @@ export function AMap() {
 // lng/lat 可选，不传则读取最近缓存
 export function getAddressByLngLat(lng, lat) {
     return new Promise((resolve, reject) => {
-
-        const laln = localStorage.getItem('geo')
-        lng = laln ? JSON.parse(laln).lng : lng
-        lat = laln ? JSON.parse(laln).lat : lat
         if (!lng || !lat) {
             reject('无有效经纬度||经纬度缺失');
             return;
@@ -114,6 +69,9 @@ export function getAddressByLngLat(lng, lat) {
                     geocoder.getAddress([lng, lat], function (status, result) {
                         if (status === "complete" && result?.regeocode) {
                             const comp = result.regeocode.addressComponent;
+
+                            const posStore = usePosStore();
+                            posStore.setPosition(comp.district || comp.city || comp.province);
                             resolve({
                                 formatted: result.regeocode.formattedAddress,
                                 province: comp.province,
