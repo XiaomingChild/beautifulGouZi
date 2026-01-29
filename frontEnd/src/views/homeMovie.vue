@@ -28,75 +28,183 @@
       </el-carousel>
     </section>
 
-    <section class="section">
-      <div class="section-head">
-        <h2>电影分类</h2>
-      </div>
-      <div class="chips">
-        <button
-          v-for="item in categories"
-          :key="item.value"
-          class="chip"
-          :class="{ active: item.value === activeCategory }"
-          type="button"
-          @click="handleCategoryClick(item.value)"
-        >
-          {{ item.label }}
-        </button>
-      </div>
-    </section>
+    <section class="section content-grid">
+      <div class="main-column">
+        <div class="section-head">
+          <h2>电影分类</h2>
+        </div>
+        <div class="chips">
+          <button
+            v-for="item in categories"
+            :key="item.value"
+            class="chip"
+            :class="{ active: item.value === activeCategory }"
+            type="button"
+            @click="handleCategoryClick(item.value)"
+          >
+            {{ item.label }}
+          </button>
+        </div>
 
-    <section class="section">
-      <div class="section-head">
-        <h2>精选影片</h2>
-      </div>
-      <div
-        class="cards"
-        v-infinite-scroll="loadMore"
-        :infinite-scroll-disabled="noMore"
-        infinite-scroll-distance="160"
-      >
-        <article
-          v-for="movie in visibleMovies"
-          :key="movie.id"
-          class="card"
-          @click="goDetail"
-        >
-          <div class="poster" :style="{ backgroundImage: `url(${movie.imgUrl})` }">
-            <span class="rating">{{ movie.rating }}</span>
-            <button
-              class="fav"
-              :class="{ active: movie.liked }"
-              type="button"
-              aria-label="收藏"
-              @click="toggleLike(movie, $event)"
+        <div class="sub-section">
+          <div class="section-head">
+            <h2>正在热映</h2>
+            <span class="section-sub">影院热映精选</span>
+          </div>
+          <div class="cards">
+            <article
+              v-for="movie in limitedNowPlaying"
+              :key="movie.id"
+              class="card"
+              @click="goDetail"
             >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path
-                  d="M12 17.27 6.18 21l1.6-6.86L2 9.63l7-.6L12 2l3 7.03 7 .6-5.78 4.51L17.82 21z"
-                />
-              </svg>
-            </button>
+              <div class="poster" :style="{ backgroundImage: `url(${movie.imgUrl})` }">
+                <span class="rating">{{ movie.rating }}</span>
+                <button
+                  class="fav"
+                  :class="{ active: movie.liked }"
+                  type="button"
+                  aria-label="收藏"
+                  @click="toggleLike(movie, $event)"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      d="M12 17.27 6.18 21l1.6-6.86L2 9.63l7-.6L12 2l3 7.03 7 .6-5.78 4.51L17.82 21z"
+                    />
+                  </svg>
+                </button>
+              </div>
+              <div class="card-body">
+                <h3 class="card-title">{{ movie.title }}</h3>
+                <p class="card-subtitle">{{ movie.subtitle }}</p>
+                <div class="tags">
+                  <span v-for="tag in movie.tags" :key="tag" class="tag">{{ tag }}</span>
+                </div>
+                <button class="buy" type="button" @click.stop="goDetail">购票</button>
+              </div>
+            </article>
           </div>
-          <div class="card-body">
-            <h3 class="card-title">{{ movie.title }}</h3>
-            <p class="card-subtitle">{{ movie.subtitle }}</p>
-            <div class="tags">
-              <span v-for="tag in movie.tags" :key="tag" class="tag">{{ tag }}</span>
-            </div>
-            <button class="buy" type="button" @click.stop="goDetail">购票</button>
+        </div>
+
+        <div class="sub-section">
+          <div class="section-head">
+            <h2>即将上线</h2>
+            <span class="section-sub">提前锁定想看</span>
           </div>
-        </article>
+          <div class="cards upcoming-cards">
+            <article
+              v-for="movie in limitedComingSoon"
+              :key="movie.id"
+              class="card"
+              @click="goDetail"
+            >
+              <div class="poster" :style="{ backgroundImage: `url(${movie.imgUrl})` }">
+                <span class="rating">{{ movie.rating }}</span>
+              </div>
+              <div class="card-body">
+                <h3 class="card-title">{{ movie.title }}</h3>
+                <p class="card-subtitle">{{ movie.subtitle }}</p>
+                <div class="tags">
+                  <span v-for="tag in movie.tags" :key="tag" class="tag">{{ tag }}</span>
+                </div>
+                <div class="card-meta">
+                  <span class="release">上映 {{ movie.releaseDate }}</span>
+                  <span class="wish-count">{{ formatNumber(movie.wishes) }} 人想看</span>
+                </div>
+                <button
+                  class="wish"
+                  :class="{ active: movie.want }"
+                  type="button"
+                  @click.stop="toggleWish(movie, $event)"
+                >
+                  {{ movie.want ? '已想看' : '想看' }}
+                </button>
+              </div>
+            </article>
+          </div>
+        </div>
       </div>
+
+      <aside class="sidebar">
+        <div class="rank-block">
+          <div class="rank-head">
+            <h3>票房排行</h3>
+            <span class="rank-tag">今日</span>
+          </div>
+          <ol class="rank-list">
+            <li
+              v-for="(item, index) in boxOfficeRankings"
+              :key="item.title"
+              class="rank-item"
+              :class="{ highlight: index === 0 }"
+            >
+              <span class="rank-no" :class="{ top: index < 3 }">{{ index + 1 }}</span>
+              <div class="rank-info">
+                <p class="rank-title">{{ item.title }}</p>
+                <p class="rank-amount">{{ item.amount }}</p>
+              </div>
+              <img
+                v-if="index === 0 && item.imgUrl"
+                :src="item.imgUrl"
+                alt="票房冠军海报"
+                class="rank-thumb"
+              />
+            </li>
+          </ol>
+        </div>
+
+        <div class="rank-block">
+          <div class="rank-head">
+            <h3>即将上映期待排行</h3>
+            <span class="rank-tag">想看</span>
+          </div>
+          <div v-if="expectedTop" class="expected-top">
+            <div class="expected-thumb" :style="{ backgroundImage: `url(${expectedTop.imgUrl})` }"></div>
+            <div class="expected-info">
+              <p class="expected-title">1. {{ expectedTop.title }}</p>
+              <p class="expected-release">上映时间：{{ expectedTop.releaseDate }}</p>
+              <p class="expected-wish">{{ formatNumber(expectedTop.wishes) }} 人想看</p>
+            </div>
+          </div>
+
+          <div class="expected-grid" v-if="expectedGrid.length">
+            <div
+              v-for="(item, idx) in expectedGrid"
+              :key="item.id"
+              class="expected-card"
+            >
+              <div class="expected-card-thumb" :style="{ backgroundImage: `url(${item.imgUrl})` }">
+                <span class="expected-badge">{{ idx + 2 }}</span>
+              </div>
+              <div class="expected-card-body">
+                <p class="expected-card-title">{{ item.title }}</p>
+                <p class="expected-card-wish">{{ formatNumber(item.wishes) }} 人想看</p>
+              </div>
+            </div>
+          </div>
+
+          <ol class="rank-list expected-list" v-if="expectedRest.length">
+            <li
+              v-for="(item, index) in expectedRest"
+              :key="item.id"
+              class="rank-item"
+            >
+              <span class="rank-no" :class="{ top: index + 3 < 3 }">{{ index + 4 }}</span>
+              <div class="rank-info">
+                <p class="rank-title">{{ item.title }}</p>
+                <p class="rank-amount">{{ formatNumber(item.wishes) }} 人想看</p>
+              </div>
+            </li>
+          </ol>
+        </div>
+      </aside>
     </section>
   </main>
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue';
-import { onMounted, computed } from 'vue';
+import { reactive, ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
-
 
 interface Movie {
   id: number;
@@ -107,6 +215,16 @@ interface Movie {
   imgUrl: string;
   liked: boolean;
   category: string;
+  status: 'now' | 'soon';
+  releaseDate?: string;
+  wishes?: number;
+  want?: boolean;
+}
+
+interface RankingItem {
+  title: string;
+  amount: string;
+  imgUrl?: string;
 }
 
 const router = useRouter();
@@ -132,11 +250,6 @@ const heroSlides = [
   },
 ];
 
-// Tag codes -> 中文释义
-// action 动作, comedy 喜剧, romance 爱情, animation 动画, scifi 科幻,
-// adventure 冒险, drama 剧情, crime 犯罪, fantasy 奇幻, history 历史,
-// thriller 惊悚, family 合家欢, racing 竞速, disaster 灾难, social 社会, workplace 职场
-
 const categories = [
   { label: '全部', value: 'all' },
   { label: '正在热映', value: 'now_playing' },
@@ -148,232 +261,332 @@ const categories = [
   { label: '动漫片', value: 'animation' },
   { label: '科幻片', value: 'scifi' },
 ];
-//选中类型
-const activeCategory = ref(categories[0].value);
-const PAGE_SIZE = 8;
 
-const allMovies: Movie[] = [
+const activeCategory = ref(categories[0].value);
+
+const allMovies = reactive<Movie[]>([
   {
     id: 1,
     title: '奥本海默',
     subtitle: '克里斯托弗·诺兰 · 惊悚',
     rating: '9.2',
-    tags: ['drama', 'history'], // 剧情, 历史
+    tags: ['drama', 'history'],
     imgUrl: 'https://image.tmdb.org/t/p/w500/nBNZadXqJSdt05SHLqgT0HuC5Gm.jpg',
     liked: false,
     category: 'now_playing',
+    status: 'now',
   },
   {
     id: 2,
     title: '芭比',
     subtitle: '格蕾塔·葛韦格 · 喜剧',
     rating: '8.7',
-    tags: ['comedy', 'fantasy'], // 喜剧, 奇幻
+    tags: ['comedy', 'fantasy'],
     imgUrl: 'https://image.tmdb.org/t/p/w500/iuFNMS8U5cb6xfzi51Dbkovj7vM.jpg',
     liked: false,
-    category: 'now_playing',
+    category: 'comedy',
+    status: 'now',
   },
   {
     id: 3,
     title: '蜘蛛侠：纵横宇宙',
     subtitle: '动画 · 冒险',
     rating: '9.0',
-    tags: ['animation', 'adventure'], // 动画, 冒险
+    tags: ['animation', 'adventure'],
     imgUrl: 'https://image.tmdb.org/t/p/w500/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg',
     liked: false,
     category: 'animation',
+    status: 'now',
   },
   {
     id: 4,
     title: '疾速追杀4',
     subtitle: '基努·里维斯 · 动作',
     rating: '8.5',
-    tags: ['action', 'crime'], // 动作, 犯罪
+    tags: ['action', 'crime'],
     imgUrl: 'https://image.tmdb.org/t/p/w500/vZloFAK7NmvMGKE7VkF5UHaz0I.jpg',
     liked: false,
     category: 'action',
+    status: 'now',
   },
   {
     id: 5,
     title: '火星救援特别版',
     subtitle: '科幻 · 冒险',
     rating: '8.9',
-    tags: ['scifi', 'adventure'], // 科幻, 冒险
+    tags: ['scifi', 'adventure'],
     imgUrl: 'https://image.tmdb.org/t/p/w500/d5NXSklXo0qyIYkgV94XAgMIckC.jpg',
     liked: false,
     category: 'scifi',
+    status: 'now',
   },
   {
     id: 6,
     title: '速度与激情：燃烧',
     subtitle: '赛车 · 动作',
     rating: '7.8',
-    tags: ['action', 'racing'], // 动作, 竞速
+    tags: ['action', 'racing'],
     imgUrl: 'https://image.tmdb.org/t/p/w500/fiVW06jE7z9YnO4trhaMEdclSiC.jpg',
     liked: false,
     category: 'action',
+    status: 'now',
   },
   {
     id: 7,
     title: '深海奇缘',
     subtitle: '奇幻 · 冒险',
     rating: '8.3',
-    tags: ['fantasy', 'adventure'], // 奇幻, 冒险
+    tags: ['fantasy', 'adventure'],
     imgUrl: 'https://image.tmdb.org/t/p/w500/aE5DYteFms4VTvk3gqyNwDqvF6k.jpg',
     liked: false,
     category: 'classic',
+    status: 'now',
   },
   {
     id: 8,
     title: '沙丘·觉醒',
     subtitle: '科幻 · 史诗',
     rating: '8.5',
-    tags: ['scifi', 'adventure'], // 科幻, 冒险
+    tags: ['scifi', 'adventure'],
     imgUrl: 'https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0mva0y9Iv5V9V10D.jpg',
     liked: false,
     category: 'scifi',
+    status: 'now',
   },
   {
     id: 9,
     title: '瞬息全宇宙',
     subtitle: '荒诞 · 家庭 · 动作',
     rating: '8.8',
-    tags: ['fantasy', 'comedy'], // 奇幻, 喜剧
+    tags: ['fantasy', 'comedy'],
     imgUrl: 'https://image.tmdb.org/t/p/w500/wKiOkZTN9lUUUNZLmtnwubZYONg.jpg',
     liked: false,
     category: 'comedy',
+    status: 'now',
   },
   {
     id: 10,
     title: '流浪地球2',
     subtitle: '科幻 · 末世',
     rating: '8.4',
-    tags: ['scifi', 'disaster'], // 科幻, 灾难
+    tags: ['scifi', 'disaster'],
     imgUrl: 'https://image.tmdb.org/t/p/w500/5YZbUmjbMa3ClvSW1Wj3D6XGolb.jpg',
     liked: false,
     category: 'scifi',
+    status: 'now',
   },
   {
     id: 11,
     title: '你的名字',
     subtitle: '新海诚 · 爱情 · 动画',
     rating: '9.1',
-    tags: ['romance', 'animation'], // 爱情, 动画
+    tags: ['romance', 'animation'],
     imgUrl: 'https://image.tmdb.org/t/p/w500/q719jXXEzOoYaps6babgKnONONX.jpg',
     liked: false,
     category: 'romance',
+    status: 'now',
   },
   {
     id: 12,
     title: '小丑',
     subtitle: '心理 · 犯罪',
     rating: '8.9',
-    tags: ['drama', 'crime'], // 剧情, 犯罪
+    tags: ['drama', 'crime'],
     imgUrl: 'https://image.tmdb.org/t/p/w500/udDclJoHjfjb8Ekgsd4FDteOkCU.jpg',
     liked: false,
     category: 'classic',
+    status: 'now',
   },
   {
-    id: 13,
-    title: '复仇者联盟：终局之战',
-    subtitle: '漫威 · 超级英雄',
-    rating: '8.6',
-    tags: ['action', 'scifi'], // 动作, 科幻
-    imgUrl: 'https://image.tmdb.org/t/p/w500/or06FN3Dka5tukK1e9sl16pB3iy.jpg',
+    id: 101,
+    title: '疯狂动物城2',
+    subtitle: '动画 · 喜剧',
+    rating: '想看',
+    tags: ['animation', 'comedy'],
+    imgUrl: 'https://image.tmdb.org/t/p/w500/ydcXtH3UX0DpDhmPEw24kTx5cRQ.jpg',
     liked: false,
-    category: 'action',
+    category: 'coming_soon',
+    status: 'soon',
+    releaseDate: '2025-02-14',
+    wishes: 182430,
+    want: false,
   },
   {
-    id: 14,
-    title: '寄生虫',
-    subtitle: '奉俊昊 · 黑色幽默',
-    rating: '9.0',
-    tags: ['drama', 'thriller'], // 剧情, 惊悚
-    imgUrl: 'https://image.tmdb.org/t/p/w500/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg',
+    id: 102,
+    title: '哪吒2：魔童闹海',
+    subtitle: '国漫 · 奇幻',
+    rating: '想看',
+    tags: ['animation', 'fantasy'],
+    imgUrl: 'https://image.tmdb.org/t/p/w500/4W0FnjSGn4x0mKZlBRx8OjFxQUM.jpg',
     liked: false,
-    category: 'classic',
+    category: 'coming_soon',
+    status: 'soon',
+    releaseDate: '2025-02-10',
+    wishes: 234560,
+    want: false,
   },
   {
-    id: 15,
-    title: '神偷奶爸4',
-    subtitle: '合家欢 · 动画',
-    rating: '8.1',
-    tags: ['animation', 'family'], // 动画, 合家欢
+    id: 103,
+    title: '流浪地球3',
+    subtitle: '刘慈欣 · 科幻',
+    rating: '想看',
+    tags: ['scifi', 'adventure'],
+    imgUrl: 'https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0mva0y9Iv5V9V10D.jpg',
+    liked: false,
+    category: 'scifi',
+    status: 'soon',
+    releaseDate: '2025-03-15',
+    wishes: 210340,
+    want: false,
+  },
+  {
+    id: 104,
+    title: '芭比2',
+    subtitle: '梦幻续作',
+    rating: '想看',
+    tags: ['comedy', 'fantasy'],
+    imgUrl: 'https://image.tmdb.org/t/p/w500/iuFNMS8U5cb6xfzi51Dbkovj7vM.jpg',
+    liked: false,
+    category: 'comedy',
+    status: 'soon',
+    releaseDate: '2025-05-01',
+    wishes: 165500,
+    want: false,
+  },
+  {
+    id: 105,
+    title: '你的名字2',
+    subtitle: '新海诚 · 青春',
+    rating: '想看',
+    tags: ['romance', 'animation'],
+    imgUrl: 'https://image.tmdb.org/t/p/w500/q719jXXEzOoYaps6babgKnONONX.jpg',
+    liked: false,
+    category: 'romance',
+    status: 'soon',
+    releaseDate: '2025-04-12',
+    wishes: 145900,
+    want: false,
+  },
+  {
+    id: 106,
+    title: '灌篮高手：全国大赛',
+    subtitle: '热血 · 体育',
+    rating: '想看',
+    tags: ['animation', 'family'],
     imgUrl: 'https://image.tmdb.org/t/p/w500/zfE0R94v1E8cuKAerbskfD3VfUt.jpg',
     liked: false,
     category: 'animation',
+    status: 'soon',
+    releaseDate: '2025-06-08',
+    wishes: 132200,
+    want: false,
   },
   {
-    id: 16,
-    title: '壮志凌云2：独行侠',
-    subtitle: '汤姆·克鲁斯 · 飞行',
-    rating: '8.7',
-    tags: ['action', 'drama'], // 动作, 剧情
-    imgUrl: 'https://image.tmdb.org/t/p/w500/62HCnUTziyWcpDaBO2i1DX17ljH.jpg',
+    id: 107,
+    title: '银河护卫队：重启',
+    subtitle: '漫威 · 冒险',
+    rating: '想看',
+    tags: ['action', 'scifi'],
+    imgUrl: 'https://image.tmdb.org/t/p/w500/or06FN3Dka5tukK1e9sl16pB3iy.jpg',
     liked: false,
     category: 'action',
+    status: 'soon',
+    releaseDate: '2025-07-05',
+    wishes: 118900,
+    want: false,
   },
   {
-    id: 17,
-    title: '别告诉她',
-    subtitle: '卢璐王 · 家庭',
-    rating: '8.2',
-    tags: ['drama', 'comedy'], // 剧情, 喜剧
-    imgUrl: 'https://image.tmdb.org/t/p/w500/zfhrUjk1oLNa68GdRutCKeIAAnw.jpg',
+    id: 108,
+    title: '神偷奶爸5',
+    subtitle: '合家欢 · 搞笑',
+    rating: '想看',
+    tags: ['animation', 'family'],
+    imgUrl: 'https://image.tmdb.org/t/p/w500/zfE0R94v1E8cuKAerbskfD3VfUt.jpg',
     liked: false,
-    category: 'classic',
+    category: 'animation',
+    status: 'soon',
+    releaseDate: '2025-07-20',
+    wishes: 98000,
+    want: false,
   },
   {
-    id: 18,
-    title: '夏洛特烦恼',
-    subtitle: '开心麻花 · 喜剧',
-    rating: '8.0',
-    tags: ['comedy', 'romance'], // 喜剧, 爱情
-    imgUrl: 'https://image.tmdb.org/t/p/w500/yY76zq9XSuJ4nWyPDuwkdV7Wt0c.jpg',
-    liked: false,
-    category: 'comedy',
-  },
-  {
-    id: 19,
-    title: '海王2',
-    subtitle: 'DC · 水下冒险',
-    rating: '7.6',
-    tags: ['action', 'adventure'], // 动作, 冒险
-    imgUrl: 'https://image.tmdb.org/t/p/w500/aqhLeieyTpTUKPOfZ3jzo2La0Mq.jpg',
-    liked: false,
-    category: 'scifi',
-  },
-  {
-    id: 20,
-    title: '黑寡妇',
-    subtitle: '漫威 · 间谍',
-    rating: '7.8',
-    tags: ['action', 'thriller'], // 动作, 惊悚
-    imgUrl: 'https://image.tmdb.org/t/p/w500/yDHYTfA3R0jFYba16jBB1ef8oIt.jpg',
-    liked: false,
-    category: 'action',
-  },
-  {
-    id: 21,
-    title: '年会不能停！',
-    subtitle: '职场 · 喜剧',
-    rating: '8.3',
-    tags: ['comedy', 'workplace'], // 喜剧, 职场
-    imgUrl: 'https://image.tmdb.org/t/p/w500/qik0hHDKtX0XZn3VOXnwvgkReC7.jpg',
-    liked: false,
-    category: 'comedy',
-  },
-  {
-    id: 22,
-    title: '我不是药神',
-    subtitle: '现实 · 温情',
-    rating: '9.0',
-    tags: ['drama', 'social'], // 剧情, 社会
+    id: 109,
+    title: '黑客帝国：复兴',
+    subtitle: '科幻 · 哲思',
+    rating: '想看',
+    tags: ['scifi', 'thriller'],
     imgUrl: 'https://image.tmdb.org/t/p/w500/84XzNL6vQGtY2C7shz5jcBEM2Js.jpg',
     liked: false,
-    category: 'classic',
+    category: 'scifi',
+    status: 'soon',
+    releaseDate: '2025-08-16',
+    wishes: 87000,
+    want: false,
   },
+  {
+    id: 110,
+    title: '速度与激情11',
+    subtitle: '赛车 · 动作',
+    rating: '想看',
+    tags: ['action', 'racing'],
+    imgUrl: 'https://image.tmdb.org/t/p/w500/fiVW06jE7z9YnO4trhaMEdclSiC.jpg',
+    liked: false,
+    category: 'action',
+    status: 'soon',
+    releaseDate: '2025-09-01',
+    wishes: 240000,
+    want: false,
+  },
+]);
+
+const boxOfficeRankings: RankingItem[] = [
+  {
+    title: '疯狂动物城2',
+    amount: '81.97万',
+    imgUrl: 'https://image.tmdb.org/t/p/w500/ydcXtH3UX0DpDhmPEw24kTx5cRQ.jpg',
+  },
+  { title: '重返寂静岭', amount: '62.05万' },
+  { title: '阿凡达3', amount: '55.29万' },
+  { title: '匪杀', amount: '49.60万' },
+  { title: '爆水管', amount: '40.21万' },
+  { title: '火星救援特别版', amount: '38.45万' },
+  { title: '奥本海默', amount: '36.12万' },
+  { title: '芭比', amount: '32.24万' },
+  { title: '瞬息全宇宙', amount: '29.50万' },
+  { title: '速度与激情：燃烧', amount: '26.08万' },
 ];
+
+const matchCategory = (movie: Movie, target: string) => {
+  if (target === 'all') return true;
+  if (target === 'now_playing') return movie.status === 'now';
+  if (target === 'coming_soon') return movie.status === 'soon';
+  return movie.category === target;
+};
+
+const filteredNowPlaying = computed(() =>
+  allMovies.filter((m) => m.status === 'now' && matchCategory(m, activeCategory.value)),
+);
+
+const filteredComingSoon = computed(() =>
+  allMovies.filter((m) => m.status === 'soon' && matchCategory(m, activeCategory.value)),
+);
+
+const limitedNowPlaying = computed(() => filteredNowPlaying.value.slice(0, 12));
+const limitedComingSoon = computed(() => filteredComingSoon.value.slice(0, 12));
+
+const expectedRanking = computed(() =>
+  [...allMovies.filter((m) => m.status === 'soon')]
+    .sort((a, b) => (b.wishes ?? 0) - (a.wishes ?? 0))
+    .slice(0, 10),
+);
+
+const expectedTop = computed(() => expectedRanking.value[0] ?? null);
+const expectedGrid = computed(() => expectedRanking.value.slice(1, 3));
+const expectedRest = computed(() => expectedRanking.value.slice(3));
+
+const handleCategoryClick = (cat: string) => {
+  activeCategory.value = cat;
+};
 
 const goDetail = () => {
   router.push('/homeMovie');
@@ -384,37 +597,15 @@ const toggleLike = (movie: Movie, e: Event) => {
   movie.liked = !movie.liked;
 };
 
-const filteredPool = computed(() =>
-  allMovies.filter((m) => activeCategory.value === 'all' || m.category === activeCategory.value),
-);
-
-const visibleMovies = ref<Movie[]>([]);
-const page = ref(0);
-const noMore = computed(() => visibleMovies.value.length >= filteredPool.value.length);
-
-const loadMore = () => {
-  const start = page.value * PAGE_SIZE;
-  const slice = filteredPool.value.slice(start, start + PAGE_SIZE);
-  if (slice.length) {
-    visibleMovies.value.push(...slice);
-    page.value += 1;
-  }
+const toggleWish = (movie: Movie, e: Event) => {
+  e.stopPropagation();
+  if (movie.status !== 'soon') return;
+  movie.want = !movie.want;
+  const delta = movie.want ? 1 : -1;
+  movie.wishes = Math.max(0, (movie.wishes ?? 0) + delta);
 };
 
-const resetAndLoad = () => {
-  page.value = 0;
-  visibleMovies.value = [];
-  loadMore();
-};
-
-const handleCategoryClick = (cat: string) => {
-  activeCategory.value = cat;
-  resetAndLoad();
-};
-
-onMounted( async () => {
-  resetAndLoad();
-});
+const formatNumber = (num: number | undefined) => (num ?? 0).toLocaleString('zh-CN');
 </script>
 
 <style lang="scss" scoped>
@@ -546,16 +737,28 @@ onMounted( async () => {
 }
 
 .section {
-  max-width: 1280px;
-  margin: 0 auto 40px;
-  padding: 0 24px;
+  max-width: 1400px;
+  margin: 0 auto 32px;
+  padding: 0 6px;
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 28px;
+  align-items: start;
+}
+
+.main-column {
+  display: grid;
+  gap: 22px;
 }
 
 .section-head {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 18px;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
 .section-head h2 {
@@ -563,6 +766,16 @@ onMounted( async () => {
   font-size: 22px;
   font-weight: 700;
   color: #111827;
+}
+
+.section-sub {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.sub-section {
+  display: grid;
+  gap: 16px;
 }
 
 .chips {
@@ -598,7 +811,7 @@ onMounted( async () => {
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 22px;
+  gap: 18px;
 }
 
 .card {
@@ -713,17 +926,38 @@ onMounted( async () => {
   padding: 4px 8px;
 }
 
-.buy {
+.card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.release {
+  color: #0f9a8a;
+}
+
+.wish-count {
+  color: #f97316;
+  font-weight: 700;
+}
+
+.buy,
+.wish {
   width: 100%;
   height: 42px;
-  border: none;
   border-radius: 10px;
-  background: #15b8a6;
-  color: #ffffff;
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s ease, transform 0.15s ease;
+  transition: background 0.15s ease, transform 0.15s ease, color 0.15s ease;
+}
+
+.buy {
+  border: none;
+  background: #15b8a6;
+  color: #ffffff;
 }
 
 .buy:hover {
@@ -731,4 +965,216 @@ onMounted( async () => {
   transform: translateY(-1px);
 }
 
+.wish {
+  border: 1px solid #f97316;
+  background: #fff7ed;
+  color: #f97316;
+}
+
+.wish.active {
+  background: #f97316;
+  color: #ffffff;
+}
+
+.sidebar {
+  position: sticky;
+  top: 92px;
+  display: grid;
+  gap: 18px;
+  height: fit-content;
+}
+
+.rank-block {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 14px 14px 10px;
+  box-shadow: 0 8px 22px rgba(17, 24, 39, 0.08);
+}
+
+.rank-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.rank-head h3 {
+  margin: 0;
+  font-size: 17px;
+  color: #111827;
+}
+
+.rank-tag {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #e8f7f5;
+  color: #0f9a8a;
+}
+
+.rank-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.rank-item {
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 8px;
+  border-radius: 10px;
+  background: #f9fafb;
+}
+
+.rank-item.highlight {
+  background: #ffffff;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+}
+
+.rank-no {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #e5e7eb;
+  color: #111827;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.rank-no.top {
+  background: #ffe8d9;
+  color: #ef3b2d;
+}
+
+.rank-info {
+  display: grid;
+  gap: 4px;
+}
+
+.rank-title {
+  margin: 0;
+  font-size: 14px;
+  color: #111827;
+}
+
+.rank-amount {
+  margin: 0;
+  font-size: 13px;
+  color: #f97316;
+  font-weight: 700;
+}
+
+.rank-thumb {
+  width: 88px;
+  height: 54px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.expected-top {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 12px;
+  background: #fff8f0;
+  margin-bottom: 12px;
+}
+
+.expected-thumb {
+  width: 120px;
+  height: 150px;
+  border-radius: 10px;
+  background-size: cover;
+  background-position: center;
+}
+
+.expected-info {
+  display: grid;
+  gap: 6px;
+}
+
+.expected-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.expected-release {
+  margin: 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.expected-wish {
+  margin: 0;
+  font-size: 14px;
+  color: #f59e0b;
+  font-weight: 700;
+}
+
+.expected-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.expected-card {
+  background: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.expected-card-thumb {
+  position: relative;
+  height: 120px;
+  background-size: cover;
+  background-position: center;
+}
+
+.expected-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 4px 8px;
+  border-radius: 10px;
+  background: #f97316;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.expected-card-body {
+  padding: 10px 12px 12px;
+  display: grid;
+  gap: 4px;
+}
+
+.expected-card-title {
+  margin: 0;
+  font-size: 14px;
+  color: #111827;
+  font-weight: 700;
+}
+
+.expected-card-wish {
+  margin: 0;
+  font-size: 13px;
+  color: #f59e0b;
+  font-weight: 700;
+}
+
+.expected-list {
+  margin-top: 4px;
+}
 </style>

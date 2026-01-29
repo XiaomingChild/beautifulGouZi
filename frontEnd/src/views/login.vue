@@ -69,11 +69,11 @@
 import { reactive, ref } from 'vue';
 import type { FormInstance, FormRules } from 'element-plus';
 import { useRouter } from 'vue-router';
-
+import { useUserStore } from '../store/userInfo';
 const formRef = ref<FormInstance>();
 const submitting = ref(false);
 const router = useRouter();
-
+const userStore = useUserStore();
 const form = reactive({
   account: '',
   password: '',
@@ -85,6 +85,18 @@ const rules: FormRules = {
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
 };
 
+const checkInfo = (account,password) => {
+  //检查账号密码是否正确
+  const adminInfo = {
+        name: 'admin',
+        password: 'tiantangfilms2026'
+      };
+  if(adminInfo.name === account && adminInfo.password === password){
+    return true;
+  }else{
+    return false;
+  }
+}
 const onSubmit = () => {
   if (!formRef.value) return;
   formRef.value.validate(async (valid) => {
@@ -96,8 +108,17 @@ const onSubmit = () => {
     }
     submitting.value = true;
     try {
-      console.log('提交登录', { ...form });
-      // await login API...
+      //调用登录接口
+      const weatherLogin = checkInfo(form.account, form.password);
+      if (weatherLogin) {
+        // 登录成功，跳转到首页
+        userStore.setUserInfo({//更新pinia数据
+          account: form.account,
+        });
+        router.push('/home');
+      } else {
+        
+      }
     } finally {
       submitting.value = false;
     }
