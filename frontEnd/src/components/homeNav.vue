@@ -13,7 +13,7 @@
             fill="currentColor"
           />
         </svg>
-        <span class="loc-text">{{ state.position }}</span>
+        <span class="loc-text">{{ position }}</span>
       </div>
       <nav class="menu">
         <RouterLink to="/home" class="menu-link" active-class="is-active">首页</RouterLink>
@@ -22,34 +22,81 @@
         <RouterLink to="/home" class="menu-link">我的</RouterLink>
       </nav>
       <div class="actions">
-        <button class="btn ghost" type="button" @click="goLogin">登录</button>
-        <button class="btn solid" type="button" @click="goRegister">注册</button>
+        <template v-if="!user.account">
+          <button class="btn ghost" type="button" @click="goLogin">登录</button>
+          <button class="btn solid" type="button" @click="goRegister">注册</button>
+        </template>
+        <div v-else class="user-chip" ref="chipRef" @click.stop="toggleMenu">
+          <img class="user-avatar" :src="user.avatar" alt="用户头像" />
+          <span class="user-name">{{ user.account }}</span>
+          <svg class="caret" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 9l5 5 5-5H7z" fill="currentColor"/>
+          </svg>
+          <div v-show="menuOpen" class="dropdown">
+            <button
+              v-for="item in menuItems"
+              :key="item.tab"
+              type="button"
+              class="dropdown-item"
+              @click.stop="goProfile(item.tab)"
+            >
+              <svg class="dropdown-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <use href="#"></use>
+              </svg>
+              <span class="dropdown-text">{{ item.label }}</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </header>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, reactive } from 'vue';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { storeToRefs } from 'pinia';
 import { useRouter } from 'vue-router';
 import logoUrl from '../assets/logo.svg';
-
+import { usePosStore } from "../store/position";
+import { useUserStore } from "../store/userInfo";
+const posStore = usePosStore();
+const { position } = storeToRefs(posStore);
+const userStore = useUserStore();
+const { state: user } = storeToRefs(userStore);
 const router = useRouter();
-const state = reactive({
-  position:'上海市'
-});
 
-
-onMounted(() => {
-  state.position = localStorage.getItem('position')
-});
-
-onUnmounted(() => {
-});
+const menuOpen = ref(false);
+const chipRef = ref<HTMLElement | null>(null);
+const menuItems = [
+  { tab: 'profile', label: '个人详情' },
+  { tab: 'records', label: '观影记录' },
+  { tab: 'favorites', label: '收藏清单' },
+  { tab: 'security', label: '账号设置' },
+];
 
 const goHome = () => router.push('/home');
 const goLogin = () => router.push('/login');
 const goRegister = () => router.push('/register');
+const goProfile = (tab: string) => {
+  router.push({ path: '/profile', query: { tab } });
+  menuOpen.value = false;
+};
+const toggleMenu = () => (menuOpen.value = !menuOpen.value);
+const handleClickOutside = (e: MouseEvent) => {
+  if (!menuOpen.value) return
+  const el = chipRef.value
+  if (el && !el.contains(e.target as Node)) {
+    menuOpen.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 </script>
 
 <style scoped lang="scss">
@@ -62,7 +109,7 @@ const goRegister = () => router.push('/register');
 }
 
 .nav-inner {
-  max-width: 1200px;
+  max-width: 1500px;
   margin: 0 auto;
   height: 68px;
   display: flex;
@@ -77,7 +124,7 @@ const goRegister = () => router.push('/register');
   gap: 8px;
   color: #0aaabf;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 14px;
   padding: 6px 10px;
   border-radius: 999px;
   background: #e9f7f9;
@@ -111,16 +158,17 @@ const goRegister = () => router.push('/register');
 }
 
 .menu {
+  margin-left: 100px;
   flex: 1;
   display: flex;
   align-items: center;
-  justify-content: space-evenly;
-  gap: 0;
+  justify-content: center;
+  gap: 100px;
 }
 
 .menu-link {
   color: #4b5563;
-  font-size: 14px;
+  font-size: 15px;
   text-decoration: none;
   position: relative;
   padding-bottom: 4px;
@@ -145,14 +193,43 @@ const goRegister = () => router.push('/register');
 .actions {
   display: inline-flex;
   gap: 12px;
-  margin-left: 32px;
+  margin-left: auto;
+}
+
+.user-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #f7fafc, #eef2ff);
+  color: #0f172a;
+  font-weight: 700;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 0 0 rgba(15, 23, 42, 0);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.user-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #d8dee9;
+}
+
+.user-name {
+  line-height: 1;
+  letter-spacing: 0.2px;
 }
 
 .btn {
   min-width: 72px;
   height: 36px;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   border: 1px solid transparent;
@@ -176,5 +253,62 @@ const goRegister = () => router.push('/register');
 
 .btn.solid:hover {
   background: #129c90;
+}
+
+.caret {
+  width: 14px;
+  height: 14px;
+  color: #94a3b8;
+}
+
+.dropdown {
+  position: absolute;
+  top: 115%;
+  right: 0;
+  min-width: 200px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.18);
+  border-radius: 14px;
+  padding: 12px;
+  display: grid;
+  gap: 6px;
+  z-index: 20;
+}
+
+.dropdown-item {
+  text-align: left;
+  border: 0;
+  background: transparent;
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.14s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dropdown-item:hover {
+  background: #e8f5ff;
+  color: #0b6bcb;
+}
+
+.dropdown-icon {
+  width: 18px;
+  height: 18px;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.dropdown-text {
+  flex: 1;
+}
+
+.user-chip:hover {
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.16);
 }
 </style>

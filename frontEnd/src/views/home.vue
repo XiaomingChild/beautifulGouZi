@@ -22,10 +22,7 @@ const state = reactive({
 });
 onMounted( async () => {
   AMap();
-  state.laln = await getAddressByLngLat();
-  console.log('当前位置：',state.laln)
   //把当前的城市存到缓存中
-  localStorage.setItem('position',state.laln.district|| state.laln.city||state.laln.province);
 });
 </script>
 
