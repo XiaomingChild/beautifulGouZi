@@ -1,12 +1,11 @@
 <template>
   <header class="nav">
     <div class="nav-inner">
-     
       <div class="brand" @click="goHome">
         <img class="brand-logo" :src="logoUrl" alt="天堂电影 Logo" />
         <span class="brand-name">天堂电影</span>
       </div>
-       <div class="location-block">
+      <div class="location-block">
         <svg class="loc-icon" viewBox="0 0 24 24" aria-hidden="true">
           <path
             d="M12 2.75a6.25 6.25 0 0 0-6.25 6.25c0 4.35 5.19 9.54 5.41 9.76.46.44 1.22.44 1.68 0 .22-.22 5.41-5.41 5.41-9.76A6.25 6.25 0 0 0 12 2.75Zm0 8.5a2.25 2.25 0 1 1 0-4.5 2.25 2.25 0 0 1 0 4.5Z"
@@ -25,11 +24,11 @@
           <button class="btn ghost" type="button" @click="goLogin">登录</button>
           <button class="btn solid" type="button" @click="goRegister">注册</button>
         </template>
-        <div v-else class="user-chip" ref="chipRef" @click.stop="toggleMenu">
-          <img class="user-avatar" :src="user.avatar" alt="用户头像" />
-          <span class="user-name">{{ user.account }}</span>
-          <svg class="caret" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M7 9l5 5 5-5H7z" fill="currentColor"/>
+        <div v-else class="user-chip" ref="chipRef">
+          <img class="user-avatar" :src="user.avatar" alt="用户头像" @click.stop="goProfile('profile')" />
+          <span class="user-name" @click.stop="toggleMenu">{{ user.nickname || user.account }}</span>
+          <svg class="caret" viewBox="0 0 24 24" aria-hidden="true" @click.stop="toggleMenu">
+            <path d="M7 9l5 5 5-5H7z" fill="currentColor" />
           </svg>
           <div v-show="menuOpen" class="dropdown">
             <button
@@ -39,10 +38,15 @@
               class="dropdown-item"
               @click.stop="goProfile(item.tab)"
             >
-              <svg class="dropdown-icon" viewBox="0 0 24 24" aria-hidden="true">
-                <use href="#"></use>
-              </svg>
               <span class="dropdown-text">{{ item.label }}</span>
+            </button>
+            <hr class="dropdown-divider" />
+            <button
+              type="button"
+              class="dropdown-item logout-item"
+              @click.stop="handleLogout"
+            >
+              <span class="dropdown-text">退出登录</span>
             </button>
           </div>
         </div>
@@ -55,9 +59,11 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useRouter } from 'vue-router';
+import { ElMessageBox, ElMessage } from 'element-plus';
 import logoUrl from '../assets/logo.svg';
 import { usePosStore } from "../store/position";
 import { useUserStore } from "../store/userInfo";
+
 const posStore = usePosStore();
 const { position } = storeToRefs(posStore);
 const userStore = useUserStore();
@@ -81,21 +87,43 @@ const goProfile = (tab: string) => {
   menuOpen.value = false;
 };
 const toggleMenu = () => (menuOpen.value = !menuOpen.value);
+
+const handleLogout = () => {
+  ElMessageBox.confirm(
+    '确定要退出登录吗？',
+    '提示',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    }
+  )
+    .then(() => {
+      localStorage.removeItem('token');
+      userStore.resetUser();
+      ElMessage.success('已退出登录');
+      menuOpen.value = false;
+      router.push('/login');
+    })
+    .catch(() => {
+    });
+};
+
 const handleClickOutside = (e: MouseEvent) => {
-  if (!menuOpen.value) return
-  const el = chipRef.value
+  if (!menuOpen.value) return;
+  const el = chipRef.value;
   if (el && !el.contains(e.target as Node)) {
-    menuOpen.value = false
+    menuOpen.value = false;
   }
-}
+};
 
 onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
-})
+  document.addEventListener('click', handleClickOutside);
+});
 
 onBeforeUnmount(() => {
-  document.removeEventListener('click', handleClickOutside)
-})
+  document.removeEventListener('click', handleClickOutside);
+});
 </script>
 
 <style scoped lang="scss">
@@ -296,15 +324,23 @@ onBeforeUnmount(() => {
   color: #0b6bcb;
 }
 
-.dropdown-icon {
-  width: 18px;
-  height: 18px;
-  color: #94a3b8;
-  flex-shrink: 0;
-}
-
 .dropdown-text {
   flex: 1;
+}
+
+.dropdown-divider {
+  border: 0;
+  border-top: 1px solid #e2e8f0;
+  margin: 4px 0;
+}
+
+.logout-item {
+  color: #ef4444 !important;
+}
+
+.logout-item:hover {
+  background: #fef2f2 !important;
+  color: #dc2626 !important;
 }
 
 .user-chip:hover {

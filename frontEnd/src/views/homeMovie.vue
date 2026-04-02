@@ -1,6 +1,6 @@
 <template>
   <main class="home-page">
-    <section class="hero">
+    <section class="hero" v-if="heroSlides.length">
       <el-carousel
         height="540px"
         arrow="hover"
@@ -13,12 +13,12 @@
           :key="item.id"
           class="hero-item"
         >
-          <div class="hero-media" :style="{ backgroundImage: `url(${item.imgUrl})` }">
+          <div class="hero-media" :style="{ backgroundImage: `url(${item.posterUrl})` }">
             <div class="hero-mask"></div>
             <div class="hero-content">
               <p class="hero-tag">特别放映</p>
-              <h1 class="hero-title">《{{ item.title }}》特别放映</h1>
-              <p class="hero-subtitle">{{ item.desc }}</p>
+              <h1 class="hero-title">《{{ item.title }}》</h1>
+              <p class="hero-subtitle">{{ item.synopsis }}</p>
               <div class="hero-actions">
                 <button class="cta" type="button" @click="goDetail(item.id)">立即购票</button>
               </div>
@@ -40,7 +40,7 @@
             class="chip"
             :class="{ active: item.value === activeCategory }"
             type="button"
-            @click="handleCategoryClick(item.value)"
+            @click="handleCategoryClick(item.value, item.label)"
           >
             {{ item.label }}
           </button>
@@ -53,32 +53,26 @@
           </div>
           <div class="cards">
             <article
-              v-for="movie in limitedNowPlaying"
+              v-for="movie in hotMovies"
               :key="movie.id"
               class="card"
               @click="goDetail(movie.id)"
             >
-              <div class="poster" :style="{ backgroundImage: `url(${movie.imgUrl})` }">
+              <div class="poster" :style="{ backgroundImage: `url(${movie.posterUrl})` }">
                 <span class="rating">{{ movie.rating }}</span>
-                <button
-                  class="fav"
-                  :class="{ active: movie.liked }"
-                  type="button"
-                  aria-label="收藏"
-                  @click="toggleLike(movie, $event)"
+                <div 
+                  class="favorite-star" 
+                  :class="{ active: isFavorited(movie.id) }" 
+                  @click.stop="handleToggleFavorite(movie.id)"
                 >
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path
-                      d="M12 17.27 6.18 21l1.6-6.86L2 9.63l7-.6L12 2l3 7.03 7 .6-5.78 4.51L17.82 21z"
-                    />
-                  </svg>
-                </button>
+                  <el-icon><StarFilled /></el-icon>
+                </div>
               </div>
               <div class="card-body">
                 <h3 class="card-title">{{ movie.title }}</h3>
-                <p class="card-subtitle">{{ movie.subtitle }}</p>
+                <p class="card-subtitle">{{ movie.durationMinutes }}分钟</p>
                 <div class="tags">
-                  <span v-for="tag in movie.tags" :key="tag" class="tag">{{ tag }}</span>
+                  <span v-for="tag in formatTags(movie.genre)" :key="tag" class="tag">{{ tag }}</span>
                 </div>
                 <button class="buy" type="button" @click.stop="goDetail(movie.id)">购票</button>
               </div>
@@ -88,36 +82,34 @@
 
         <div class="sub-section">
           <div class="section-head">
-            <h2>即将上线</h2>
+            <h2>即将上映</h2>
             <span class="section-sub">提前锁定想看</span>
           </div>
           <div class="cards upcoming-cards">
             <article
-              v-for="movie in limitedComingSoon"
+              v-for="movie in upcomingMovies"
               :key="movie.id"
               class="card"
               @click="goDetail(movie.id)"
             >
-              <div class="poster" :style="{ backgroundImage: `url(${movie.imgUrl})` }">
-                <span class="rating">{{ movie.rating }}</span>
+              <div class="poster" :style="{ backgroundImage: `url(${movie.posterUrl})` }">
+                <span class="rating">想看</span>
               </div>
               <div class="card-body">
                 <h3 class="card-title">{{ movie.title }}</h3>
-                <p class="card-subtitle">{{ movie.subtitle }}</p>
                 <div class="tags">
-                  <span v-for="tag in movie.tags" :key="tag" class="tag">{{ tag }}</span>
+                  <span v-for="tag in formatTags(movie.genre)" :key="tag" class="tag">{{ tag }}</span>
                 </div>
                 <div class="card-meta">
-                  <span class="release">上映 {{ movie.releaseDate }}</span>
-                  <span class="wish-count">{{ formatNumber(movie.wishes) }} 人想看</span>
+                  <span class="release">上映 {{ formatDate(movie.releaseDate) }}</span>
                 </div>
                 <button
                   class="wish"
-                  :class="{ active: movie.want }"
+                  :class="{ active: isFavorited(movie.id) }"
                   type="button"
-                  @click.stop="toggleWish(movie, $event)"
+                  @click.stop="handleToggleFavorite(movie.id)"
                 >
-                  {{ movie.want ? '已想看' : '想看' }}
+                  {{ isFavorited(movie.id) ? '已想看' : '想看' }}
                 </button>
               </div>
             </article>
@@ -128,72 +120,28 @@
       <aside class="sidebar">
         <div class="rank-block">
           <div class="rank-head">
-            <h3>票房排行</h3>
-            <span class="rank-tag">今日</span>
+            <h3>高分排行</h3>
+            <span class="rank-tag">Top 10</span>
           </div>
           <ol class="rank-list">
             <li
-              v-for="(item, index) in boxOfficeRankings"
-              :key="item.title"
+              v-for="(item, index) in dynamicRanking"
+              :key="item.id"
               class="rank-item"
               :class="{ highlight: index === 0 }"
+              @click="goDetail(item.id)"
             >
               <span class="rank-no" :class="{ top: index < 3 }">{{ index + 1 }}</span>
               <div class="rank-info">
                 <p class="rank-title">{{ item.title }}</p>
-                <p class="rank-amount">{{ item.amount }}</p>
+                <p class="rank-amount">{{ item.rating }} 分</p>
               </div>
               <img
-                v-if="index === 0 && item.imgUrl"
-                :src="item.imgUrl"
-                alt="票房冠军海报"
+                v-if="index === 0 && item.posterUrl"
+                :src="item.posterUrl"
+                alt="海报"
                 class="rank-thumb"
               />
-            </li>
-          </ol>
-        </div>
-
-        <div class="rank-block">
-          <div class="rank-head">
-            <h3>即将上映期待排行</h3>
-            <span class="rank-tag">想看</span>
-          </div>
-          <div v-if="expectedTop" class="expected-top">
-            <div class="expected-thumb" :style="{ backgroundImage: `url(${expectedTop.imgUrl})` }"></div>
-            <div class="expected-info">
-              <p class="expected-title">1. {{ expectedTop.title }}</p>
-              <p class="expected-release">上映时间：{{ expectedTop.releaseDate }}</p>
-              <p class="expected-wish">{{ formatNumber(expectedTop.wishes) }} 人想看</p>
-            </div>
-          </div>
-
-          <div class="expected-grid" v-if="expectedGrid.length">
-            <div
-              v-for="(item, idx) in expectedGrid"
-              :key="item.id"
-              class="expected-card"
-            >
-              <div class="expected-card-thumb" :style="{ backgroundImage: `url(${item.imgUrl})` }">
-                <span class="expected-badge">{{ idx + 2 }}</span>
-              </div>
-              <div class="expected-card-body">
-                <p class="expected-card-title">{{ item.title }}</p>
-                <p class="expected-card-wish">{{ formatNumber(item.wishes) }} 人想看</p>
-              </div>
-            </div>
-          </div>
-
-          <ol class="rank-list expected-list" v-if="expectedRest.length">
-            <li
-              v-for="(item, index) in expectedRest"
-              :key="item.id"
-              class="rank-item"
-            >
-              <span class="rank-no" :class="{ top: index + 3 < 3 }">{{ index + 4 }}</span>
-              <div class="rank-info">
-                <p class="rank-title">{{ item.title }}</p>
-                <p class="rank-amount">{{ formatNumber(item.wishes) }} 人想看</p>
-              </div>
             </li>
           </ol>
         </div>
@@ -203,409 +151,151 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, computed } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { StarFilled } from '@element-plus/icons-vue';
+import { ElMessage } from 'element-plus';
+import { 
+  getHotMoviesApi, 
+  getUpcomingMoviesApi, 
+  getMoviesByCategoryApi,
+  getMovieRankingApi,
+  toggleFavoriteApi,
+  getUserFavoritesApi
+} from '../api/movie';
+import { useUserStore } from '../store/userInfo';
 
 interface Movie {
   id: number;
   title: string;
-  subtitle: string;
-  rating: string;
-  tags: string[];
-  imgUrl: string;
-  liked: boolean;
-  category: string;
-  status: 'now' | 'soon';
-  releaseDate?: string;
-  wishes?: number;
-  want?: boolean;
-}
-
-interface RankingItem {
-  title: string;
-  amount: string;
-  imgUrl?: string;
+  rating: number;
+  genre: string;
+  posterUrl: string;
+  synopsis: string;
+  durationMinutes: number;
+  releaseDate: string;
 }
 
 const router = useRouter();
+const userStore = useUserStore();
 
-const heroSlides = [
-  {
-    id: 1,
-    title: '星际穿越',
-    desc: '诺兰经典科幻巨制，IMAX 体验震撼回归',
-    imgUrl: 'https://image.tmdb.org/t/p/original/rCzpDGLbOoPwLjy3OAm5NUPOTrC.jpg',
-  },
-  {
-    id: 2,
-    title: '星际探索',
-    desc: '孤独宇航员的漫长旅程，寻找深空真相',
-    imgUrl: 'https://image.tmdb.org/t/p/original/xBHvZcjRiWyobQ9kxBhO6B2dtRI.jpg',
-  },
-  {
-    id: 3,
-    title: '太空营救',
-    desc: '失联航天员紧急回家，火星轨道惊心动魄',
-    imgUrl: 'https://image.tmdb.org/t/p/original/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg',
-  },
-];
+const hotMovies = ref<Movie[]>([]);
+const upcomingMovies = ref<Movie[]>([]);
+const heroSlides = ref<Movie[]>([]);
+const dynamicRanking = ref<Movie[]>([]);
+const favoriteIds = ref<number[]>([]);
 
 const categories = [
   { label: '全部', value: 'all' },
   { label: '正在热映', value: 'now_playing' },
   { label: '即将上映', value: 'coming_soon' },
-  { label: '经典影片', value: 'classic' },
-  { label: '动作片', value: 'action' },
-  { label: '喜剧片', value: 'comedy' },
-  { label: '爱情片', value: 'romance' },
-  { label: '动漫片', value: 'animation' },
-  { label: '科幻片', value: 'scifi' },
+  { label: '剧情', value: '剧情' },
+  { label: '喜剧', value: '喜剧' },
+  { label: '动作', value: '动作' },
+  { label: '爱情', value: '爱情' },
+  { label: '科幻', value: '科幻' },
+  { label: '动画', value: '动画' },
 ];
 
 const activeCategory = ref(categories[0].value);
 
-const allMovies = reactive<Movie[]>([
-  {
-    id: 1,
-    title: '奥本海默',
-    subtitle: '克里斯托弗·诺兰 · 惊悚',
-    rating: '9.2',
-    tags: ['drama', 'history'],
-    imgUrl: 'https://image.tmdb.org/t/p/w500/nBNZadXqJSdt05SHLqgT0HuC5Gm.jpg',
-    liked: false,
-    category: 'now_playing',
-    status: 'now',
-  },
-  {
-    id: 2,
-    title: '芭比',
-    subtitle: '格蕾塔·葛韦格 · 喜剧',
-    rating: '8.7',
-    tags: ['comedy', 'fantasy'],
-    imgUrl: 'https://image.tmdb.org/t/p/w500/iuFNMS8U5cb6xfzi51Dbkovj7vM.jpg',
-    liked: false,
-    category: 'comedy',
-    status: 'now',
-  },
-  {
-    id: 3,
-    title: '蜘蛛侠：纵横宇宙',
-    subtitle: '动画 · 冒险',
-    rating: '9.0',
-    tags: ['animation', 'adventure'],
-    imgUrl: 'https://image.tmdb.org/t/p/w500/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg',
-    liked: false,
-    category: 'animation',
-    status: 'now',
-  },
-  {
-    id: 4,
-    title: '疾速追杀4',
-    subtitle: '基努·里维斯 · 动作',
-    rating: '8.5',
-    tags: ['action', 'crime'],
-    imgUrl: 'https://image.tmdb.org/t/p/w500/vZloFAK7NmvMGKE7VkF5UHaz0I.jpg',
-    liked: false,
-    category: 'action',
-    status: 'now',
-  },
-  {
-    id: 5,
-    title: '火星救援特别版',
-    subtitle: '科幻 · 冒险',
-    rating: '8.9',
-    tags: ['scifi', 'adventure'],
-    imgUrl: 'https://image.tmdb.org/t/p/w500/d5NXSklXo0qyIYkgV94XAgMIckC.jpg',
-    liked: false,
-    category: 'scifi',
-    status: 'now',
-  },
-  {
-    id: 6,
-    title: '速度与激情：燃烧',
-    subtitle: '赛车 · 动作',
-    rating: '7.8',
-    tags: ['action', 'racing'],
-    imgUrl: 'https://image.tmdb.org/t/p/w500/fiVW06jE7z9YnO4trhaMEdclSiC.jpg',
-    liked: false,
-    category: 'action',
-    status: 'now',
-  },
-  {
-    id: 7,
-    title: '深海奇缘',
-    subtitle: '奇幻 · 冒险',
-    rating: '8.3',
-    tags: ['fantasy', 'adventure'],
-    imgUrl: 'https://image.tmdb.org/t/p/w500/aE5DYteFms4VTvk3gqyNwDqvF6k.jpg',
-    liked: false,
-    category: 'classic',
-    status: 'now',
-  },
-  {
-    id: 8,
-    title: '沙丘·觉醒',
-    subtitle: '科幻 · 史诗',
-    rating: '8.5',
-    tags: ['scifi', 'adventure'],
-    imgUrl: 'https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0mva0y9Iv5V9V10D.jpg',
-    liked: false,
-    category: 'scifi',
-    status: 'now',
-  },
-  {
-    id: 9,
-    title: '瞬息全宇宙',
-    subtitle: '荒诞 · 家庭 · 动作',
-    rating: '8.8',
-    tags: ['fantasy', 'comedy'],
-    imgUrl: 'https://image.tmdb.org/t/p/w500/wKiOkZTN9lUUUNZLmtnwubZYONg.jpg',
-    liked: false,
-    category: 'comedy',
-    status: 'now',
-  },
-  {
-    id: 10,
-    title: '流浪地球2',
-    subtitle: '科幻 · 末世',
-    rating: '8.4',
-    tags: ['scifi', 'disaster'],
-    imgUrl: 'https://image.tmdb.org/t/p/w500/5YZbUmjbMa3ClvSW1Wj3D6XGolb.jpg',
-    liked: false,
-    category: 'scifi',
-    status: 'now',
-  },
-  {
-    id: 11,
-    title: '你的名字',
-    subtitle: '新海诚 · 爱情 · 动画',
-    rating: '9.1',
-    tags: ['romance', 'animation'],
-    imgUrl: 'https://image.tmdb.org/t/p/w500/q719jXXEzOoYaps6babgKnONONX.jpg',
-    liked: false,
-    category: 'romance',
-    status: 'now',
-  },
-  {
-    id: 12,
-    title: '小丑',
-    subtitle: '心理 · 犯罪',
-    rating: '8.9',
-    tags: ['drama', 'crime'],
-    imgUrl: 'https://image.tmdb.org/t/p/w500/udDclJoHjfjb8Ekgsd4FDteOkCU.jpg',
-    liked: false,
-    category: 'classic',
-    status: 'now',
-  },
-  {
-    id: 101,
-    title: '疯狂动物城2',
-    subtitle: '动画 · 喜剧',
-    rating: '想看',
-    tags: ['animation', 'comedy'],
-    imgUrl: 'https://image.tmdb.org/t/p/w500/ydcXtH3UX0DpDhmPEw24kTx5cRQ.jpg',
-    liked: false,
-    category: 'coming_soon',
-    status: 'soon',
-    releaseDate: '2025-02-14',
-    wishes: 182430,
-    want: false,
-  },
-  {
-    id: 102,
-    title: '哪吒2：魔童闹海',
-    subtitle: '国漫 · 奇幻',
-    rating: '想看',
-    tags: ['animation', 'fantasy'],
-    imgUrl: 'https://image.tmdb.org/t/p/w500/4W0FnjSGn4x0mKZlBRx8OjFxQUM.jpg',
-    liked: false,
-    category: 'coming_soon',
-    status: 'soon',
-    releaseDate: '2025-02-10',
-    wishes: 234560,
-    want: false,
-  },
-  {
-    id: 103,
-    title: '流浪地球3',
-    subtitle: '刘慈欣 · 科幻',
-    rating: '想看',
-    tags: ['scifi', 'adventure'],
-    imgUrl: 'https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0mva0y9Iv5V9V10D.jpg',
-    liked: false,
-    category: 'scifi',
-    status: 'soon',
-    releaseDate: '2025-03-15',
-    wishes: 210340,
-    want: false,
-  },
-  {
-    id: 104,
-    title: '芭比2',
-    subtitle: '梦幻续作',
-    rating: '想看',
-    tags: ['comedy', 'fantasy'],
-    imgUrl: 'https://image.tmdb.org/t/p/w500/iuFNMS8U5cb6xfzi51Dbkovj7vM.jpg',
-    liked: false,
-    category: 'comedy',
-    status: 'soon',
-    releaseDate: '2025-05-01',
-    wishes: 165500,
-    want: false,
-  },
-  {
-    id: 105,
-    title: '你的名字2',
-    subtitle: '新海诚 · 青春',
-    rating: '想看',
-    tags: ['romance', 'animation'],
-    imgUrl: 'https://image.tmdb.org/t/p/w500/q719jXXEzOoYaps6babgKnONONX.jpg',
-    liked: false,
-    category: 'romance',
-    status: 'soon',
-    releaseDate: '2025-04-12',
-    wishes: 145900,
-    want: false,
-  },
-  {
-    id: 106,
-    title: '灌篮高手：全国大赛',
-    subtitle: '热血 · 体育',
-    rating: '想看',
-    tags: ['animation', 'family'],
-    imgUrl: 'https://image.tmdb.org/t/p/w500/zfE0R94v1E8cuKAerbskfD3VfUt.jpg',
-    liked: false,
-    category: 'animation',
-    status: 'soon',
-    releaseDate: '2025-06-08',
-    wishes: 132200,
-    want: false,
-  },
-  {
-    id: 107,
-    title: '银河护卫队：重启',
-    subtitle: '漫威 · 冒险',
-    rating: '想看',
-    tags: ['action', 'scifi'],
-    imgUrl: 'https://image.tmdb.org/t/p/w500/or06FN3Dka5tukK1e9sl16pB3iy.jpg',
-    liked: false,
-    category: 'action',
-    status: 'soon',
-    releaseDate: '2025-07-05',
-    wishes: 118900,
-    want: false,
-  },
-  {
-    id: 108,
-    title: '神偷奶爸5',
-    subtitle: '合家欢 · 搞笑',
-    rating: '想看',
-    tags: ['animation', 'family'],
-    imgUrl: 'https://image.tmdb.org/t/p/w500/zfE0R94v1E8cuKAerbskfD3VfUt.jpg',
-    liked: false,
-    category: 'animation',
-    status: 'soon',
-    releaseDate: '2025-07-20',
-    wishes: 98000,
-    want: false,
-  },
-  {
-    id: 109,
-    title: '黑客帝国：复兴',
-    subtitle: '科幻 · 哲思',
-    rating: '想看',
-    tags: ['scifi', 'thriller'],
-    imgUrl: 'https://image.tmdb.org/t/p/w500/84XzNL6vQGtY2C7shz5jcBEM2Js.jpg',
-    liked: false,
-    category: 'scifi',
-    status: 'soon',
-    releaseDate: '2025-08-16',
-    wishes: 87000,
-    want: false,
-  },
-  {
-    id: 110,
-    title: '速度与激情11',
-    subtitle: '赛车 · 动作',
-    rating: '想看',
-    tags: ['action', 'racing'],
-    imgUrl: 'https://image.tmdb.org/t/p/w500/fiVW06jE7z9YnO4trhaMEdclSiC.jpg',
-    liked: false,
-    category: 'action',
-    status: 'soon',
-    releaseDate: '2025-09-01',
-    wishes: 240000,
-    want: false,
-  },
-]);
+const loadData = async () => {
+  try {
+    const hotRes: any = await getHotMoviesApi();
+    hotMovies.value = hotRes?.content || [];
+    heroSlides.value = hotMovies.value.slice(0, 3);
 
-const boxOfficeRankings: RankingItem[] = [
-  {
-    title: '疯狂动物城2',
-    amount: '81.97万',
-    imgUrl: 'https://image.tmdb.org/t/p/w500/ydcXtH3UX0DpDhmPEw24kTx5cRQ.jpg',
-  },
-  { title: '重返寂静岭', amount: '62.05万' },
-  { title: '阿凡达3', amount: '55.29万' },
-  { title: '匪杀', amount: '49.60万' },
-  { title: '爆水管', amount: '40.21万' },
-  { title: '火星救援特别版', amount: '38.45万' },
-  { title: '奥本海默', amount: '36.12万' },
-  { title: '芭比', amount: '32.24万' },
-  { title: '瞬息全宇宙', amount: '29.50万' },
-  { title: '速度与激情：燃烧', amount: '26.08万' },
-];
+    const soonRes: any = await getUpcomingMoviesApi();
+    upcomingMovies.value = soonRes?.content || [];
 
-const matchCategory = (movie: Movie, target: string) => {
-  if (target === 'all') return true;
-  if (target === 'now_playing') return movie.status === 'now';
-  if (target === 'coming_soon') return movie.status === 'soon';
-  return movie.category === target;
+    const rankRes: any = await getMovieRankingApi();
+    dynamicRanking.value = rankRes || [];
+
+    // 优先从 store 获取已有的 selected 列表，如果没有则从后端拉取
+    if (userStore.state.id) {
+      if (userStore.state.selected && userStore.state.selected.length > 0) {
+        favoriteIds.value = userStore.state.selected;
+      } else {
+        const favRes: any = await getUserFavoritesApi(Number(userStore.state.id));
+        favoriteIds.value = favRes || [];
+        userStore.setUserInfo({ selected: favoriteIds.value });
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load movies:', error);
+  }
 };
 
-const filteredNowPlaying = computed(() =>
-  allMovies.filter((m) => m.status === 'now' && matchCategory(m, activeCategory.value)),
-);
+const handleCategoryClick = async (value: string, label: string) => {
+  activeCategory.value = value;
+  
+  try {
+    if (value === 'all') {
+      await loadData();
+    } else if (value === 'now_playing') {
+      const res: any = await getHotMoviesApi();
+      hotMovies.value = res?.content || [];
+      upcomingMovies.value = [];
+    } else if (value === 'coming_soon') {
+      const res: any = await getUpcomingMoviesApi();
+      upcomingMovies.value = soonRes?.content || [];
+      hotMovies.value = [];
+    } else {
+      const res: any = await getMoviesByCategoryApi(label);
+      hotMovies.value = res?.content || [];
+      upcomingMovies.value = [];
+    }
+  } catch (error) {
+    console.error('Filter category failed:', error);
+  }
+};
 
-const filteredComingSoon = computed(() =>
-  allMovies.filter((m) => m.status === 'soon' && matchCategory(m, activeCategory.value)),
-);
+const handleToggleFavorite = async (movieId: number) => {
+  if (!userStore.state.id) {
+    ElMessage.warning('请先登录');
+    router.push('/login');
+    return;
+  }
 
-const limitedNowPlaying = computed(() => filteredNowPlaying.value.slice(0, 12));
-const limitedComingSoon = computed(() => filteredComingSoon.value.slice(0, 12));
+  try {
+    const res: any = await toggleFavoriteApi(Number(userStore.state.id), movieId);
+    // 后端现在返回的是更新后的完整 selected 列表
+    favoriteIds.value = res || [];
+    // 同步到 store
+    userStore.setUserInfo({ selected: favoriteIds.value });
+    
+    if (favoriteIds.value.includes(movieId)) {
+      ElMessage.success('已加入收藏');
+    } else {
+      ElMessage.success('已取消收藏');
+    }
+  } catch (error) {
+    console.error('Toggle favorite failed:', error);
+    ElMessage.error('操作失败');
+  }
+};
 
-const expectedRanking = computed(() =>
-  [...allMovies.filter((m) => m.status === 'soon')]
-    .sort((a, b) => (b.wishes ?? 0) - (a.wishes ?? 0))
-    .slice(0, 10),
-);
-
-const expectedTop = computed(() => expectedRanking.value[0] ?? null);
-const expectedGrid = computed(() => expectedRanking.value.slice(1, 3));
-const expectedRest = computed(() => expectedRanking.value.slice(3));
-
-const handleCategoryClick = (cat: string) => {
-  activeCategory.value = cat;
+const isFavorited = (movieId: number) => {
+  return favoriteIds.value.includes(movieId);
 };
 
 const goDetail = (id: number) => {
   router.push(`/movieDetail/${id}`);
 };
 
-const toggleLike = (movie: Movie, e: Event) => {
-  e.stopPropagation();
-  movie.liked = !movie.liked;
+const formatTags = (genre: string) => {
+  if (!genre) return [];
+  return genre.split(',');
 };
 
-const toggleWish = (movie: Movie, e: Event) => {
-  e.stopPropagation();
-  if (movie.status !== 'soon') return;
-  movie.want = !movie.want;
-  const delta = movie.want ? 1 : -1;
-  movie.wishes = Math.max(0, (movie.wishes ?? 0) + delta);
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return '';
+  return new Date(dateStr).toLocaleDateString('zh-CN');
 };
 
-const formatNumber = (num: number | undefined) => (num ?? 0).toLocaleString('zh-CN');
+onMounted(() => {
+  loadData();
+});
 </script>
 
 <style lang="scss" scoped>
@@ -617,564 +307,221 @@ const formatNumber = (num: number | undefined) => (num ?? 0).toLocaleString('zh-
 
 .hero {
   margin: 0 auto 36px;
-  border-radius: 0;
-  overflow: hidden;
   width: 100%;
 }
 
-:deep(.el-carousel__container) {
-  border-radius: 0;
-}
-
-:deep(.el-carousel__arrow) {
-  width: 46px;
-  height: 46px;
-  background: rgba(0, 0, 0, 0.38);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  backdrop-filter: blur(8px);
-}
-
-:deep(.el-carousel__arrow:hover) {
-  background: rgba(21, 184, 166, 0.86);
-}
-
-:deep(.el-carousel__indicators--outside) {
-  margin-top: 12px;
-}
-
-:deep(.el-carousel__indicator button) {
-  height: 4px;
-  background: #d6d8dc;
-  border-radius: 999px;
-}
-
-:deep(.el-carousel__indicator.is-active button) {
-  background: #15b8a6;
-}
-
-.hero-item {
-  height: 540px;
-}
 .hero-media {
   position: relative;
-  height: 100%;
+  height: 540px;
   display: flex;
   align-items: center;
   background-size: cover;
   background-position: center;
-  background-repeat: no-repeat;
 }
 
 .hero-mask {
   position: absolute;
   inset: 0;
-  background: linear-gradient(120deg, rgba(6, 46, 60, 0.78), rgba(6, 46, 60, 0.45) 55%, rgba(6, 46, 60, 0.55));
+  background: linear-gradient(120deg, rgba(6, 46, 60, 0.7) 0%, rgba(6, 46, 60, 0.4) 100%);
 }
 
 .hero-content {
   position: relative;
   z-index: 1;
   color: #ffffff;
-  max-width: 520px;
+  max-width: 600px;
   padding: 0 72px;
-  display: grid;
-  gap: 14px;
-}
-
-.hero-tag {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 108px;
-  height: 30px;
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 999px;
-  font-size: 13px;
-  letter-spacing: 1px;
 }
 
 .hero-title {
-  font-size: 40px;
+  font-size: 42px;
   font-weight: 800;
-  margin: 0;
-  line-height: 1.2;
+  margin-bottom: 16px;
 }
 
 .hero-subtitle {
-  font-size: 15px;
-  margin: 0;
-  opacity: 0.94;
-}
-
-.hero-actions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-top: 6px;
-}
-
-.hero-dots {
-  display: none;
+  font-size: 16px;
+  line-height: 1.6;
+  opacity: 0.9;
+  margin-bottom: 24px;
 }
 
 .cta {
-  min-width: 140px;
-  height: 44px;
-  border-radius: 10px;
+  padding: 12px 32px;
+  border-radius: 8px;
   border: none;
-  background: linear-gradient(130deg, #16c3b0, #14a191);
-  color: #ffffff;
-  font-size: 15px;
+  background: #15b8a6;
+  color: #fff;
   font-weight: 700;
   cursor: pointer;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
-  box-shadow: 0 14px 28px rgba(20, 160, 147, 0.28);
-}
-
-.cta:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 18px 36px rgba(20, 160, 147, 0.32);
+  transition: all 0.3s;
+  &:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(21, 184, 166, 0.3); }
 }
 
 .section {
   max-width: 1400px;
   margin: 0 auto 32px;
-  padding: 0 6px;
 }
 
 .content-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 28px;
-  align-items: start;
-}
-
-.main-column {
-  display: grid;
-  gap: 22px;
+  grid-template-columns: 1fr 340px;
+  gap: 32px;
+  padding: 0 20px;
 }
 
 .section-head {
   display: flex;
   align-items: baseline;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-
-.section-head h2 {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 700;
-  color: #111827;
-}
-
-.section-sub {
-  font-size: 13px;
-  color: #6b7280;
-}
-
-.sub-section {
-  display: grid;
-  gap: 16px;
+  gap: 12px;
+  margin-bottom: 24px;
+  h2 { font-size: 24px; font-weight: 700; color: #111827; margin: 0; }
+  .section-sub { font-size: 14px; color: #6b7280; }
 }
 
 .chips {
   display: flex;
-  flex-wrap: wrap;
   gap: 12px;
+  margin-bottom: 32px;
+  overflow-x: auto;
+  padding-bottom: 8px;
 }
 
 .chip {
-  min-width: 108px;
-  height: 40px;
-  padding: 0 18px;
-  border: 1px solid #e3e6eb;
-  border-radius: 10px;
-  background: #ffffff;
+  padding: 8px 20px;
+  border-radius: 20px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
   color: #4b5563;
-  font-size: 14px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  white-space: nowrap;
+  &.active { background: #15b8a6; color: #fff; border-color: #15b8a6; }
 }
 
-.chip.active {
-  background: #15b8a6;
-  color: #ffffff;
-  border-color: #15b8a6;
-  box-shadow: 0 10px 18px rgba(21, 184, 166, 0.18);
-}
-
-.chip:hover {
-  border-color: #b5dfe6;
-}
+.sub-section { margin-bottom: 48px; }
 
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
 }
 
 .card {
-  background: #ffffff;
-  border-radius: 14px;
+  background: #fff;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 8px 18px rgba(17, 24, 39, 0.08);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 28px rgba(17, 24, 39, 0.14);
+  transition: all 0.3s;
+  &:hover { transform: translateY(-8px); box-shadow: 0 12px 24px rgba(0,0,0,0.1); }
 }
 
 .poster {
-  position: relative;
-  aspect-ratio: 2 / 3;
+  height: 280px;
   background-size: cover;
   background-position: center;
-  background-repeat: no-repeat;
-  overflow: hidden;
+  position: relative;
+  .rating {
+    position: absolute; top: 10px; left: 10px;
+    background: rgba(0,0,0,0.7); color: #ffde6a;
+    padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 12px;
+  }
 }
 
-.rating {
+.favorite-star {
   position: absolute;
-  top: 14px;
-  left: 14px;
-  padding: 7px 12px;
-  border-radius: 14px;
-  background: rgba(0, 0, 0, 0.66);
-  color: #ffde6a;
-  font-weight: 800;
-  font-size: 14px;
-  display: inline-flex;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(4px);
+  border-radius: 50%;
+  display: flex;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(6px);
-}
-
-.fav {
-  position: absolute;
-  right: 14px;
-  bottom: 14px;
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(17, 24, 39, 0.55);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  color: #fff;
   cursor: pointer;
-  color: #f5d24f;
-  transition: all 0.18s ease;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.16);
-}
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 2;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 
-.fav svg {
-  width: 20px;
-  height: 20px;
-  fill: transparent;
-  stroke: currentColor;
-  stroke-width: 1.6px;
-}
+  .el-icon {
+    font-size: 18px;
+  }
 
-.fav:hover {
-  transform: translateY(-1px);
-}
+  &:hover {
+    background: rgba(0,0,0,0.6);
+    transform: scale(1.1);
+  }
 
-.fav.active {
-  background: #ffffff;
-  color: #f0b90b;
-  box-shadow: 0 12px 22px rgba(0, 0, 0, 0.18);
-}
-
-.fav.active svg {
-  fill: currentColor;
-  stroke: currentColor;
+  &.active {
+    color: #ffc600;
+    background: rgba(255, 198, 0, 0.15);
+    border-color: rgba(255, 198, 0, 0.4);
+    box-shadow: 0 0 12px rgba(255, 198, 0, 0.2);
+    filter: drop-shadow(0 0 2px rgba(255, 198, 0, 0.5));
+  }
 }
 
 .card-body {
-  padding: 14px 16px 16px;
-  display: grid;
-  gap: 8px;
-}
-
-.card-title {
-  margin: 0;
-  font-size: 17px;
-  color: #111827;
-}
-
-.card-subtitle {
-  margin: 0;
-  font-size: 14px;
-  color: #6b7280;
+  padding: 12px;
+  .card-title { font-size: 16px; font-weight: 700; color: #111827; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .card-subtitle { font-size: 12px; color: #6b7280; margin-bottom: 8px; }
 }
 
 .tags {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 12px;
+  .tag { background: #f3f4f6; color: #4b5563; font-size: 10px; padding: 2px 4px; border-radius: 4px; }
 }
 
-.tag {
-  background: #f3f4f6;
-  color: #4b5563;
-  font-size: 12px;
-  border-radius: 6px;
-  padding: 4px 8px;
+.buy, .wish {
+  width: 100%; padding: 8px; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 13px;
 }
 
-.card-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 13px;
-  color: #6b7280;
-}
-
-.release {
-  color: #0f9a8a;
-}
-
-.wish-count {
-  color: #f97316;
-  font-weight: 700;
-}
-
-.buy,
-.wish {
-  width: 100%;
-  height: 42px;
-  border-radius: 10px;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.15s ease, transform 0.15s ease, color 0.15s ease;
-}
-
-.buy {
-  border: none;
-  background: #15b8a6;
-  color: #ffffff;
-}
-
-.buy:hover {
-  background: #129c90;
-  transform: translateY(-1px);
-}
-
-.wish {
-  border: 1px solid #f97316;
-  background: #fff7ed;
-  color: #f97316;
-}
-
-.wish.active {
-  background: #f97316;
-  color: #ffffff;
-}
+.buy { background: #15b8a6; color: #fff; border: none; }
+.wish { background: #fff; border: 1px solid #f97316; color: #f97316; }
+.wish.active { background: #f97316; color: #fff; border-color: #f97316; }
 
 .sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
   position: sticky;
-  top: 92px;
-  display: grid;
-  gap: 18px;
-  height: fit-content;
+  top: 88px; /* 留出顶部导航栏的高度 + 间距 */
+  align-self: start; /* 确保 sticky 生效，防止被拉伸到与左侧同高 */
 }
 
 .rank-block {
-  background: #ffffff;
-  border-radius: 14px;
-  padding: 14px 14px 10px;
-  box-shadow: 0 8px 22px rgba(17, 24, 39, 0.08);
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
 .rank-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-
-.rank-head h3 {
-  margin: 0;
-  font-size: 17px;
-  color: #111827;
-}
-
-.rank-tag {
-  font-size: 12px;
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: #e8f7f5;
-  color: #0f9a8a;
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
+  h3 { font-size: 18px; font-weight: 700; margin: 0; }
+  .rank-tag { font-size: 12px; color: #15b8a6; background: #e9f7f6; padding: 2px 8px; border-radius: 10px; }
 }
 
 .rank-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 8px;
+  list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px;
 }
 
 .rank-item {
-  display: grid;
-  grid-template-columns: 32px 1fr auto;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 8px;
-  border-radius: 10px;
-  background: #f9fafb;
-}
-
-.rank-item.highlight {
-  background: #ffffff;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+  display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 8px; transition: all 0.2s;
+  cursor: pointer;
+  &:hover { background: #f9fafb; }
+  &.highlight { background: #f0fdfa; }
 }
 
 .rank-no {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: #e5e7eb;
-  color: #111827;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 14px;
+  width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 14px; color: #9ca3af;
+  &.top { color: #f97316; }
 }
 
-.rank-no.top {
-  background: #ffe8d9;
-  color: #ef3b2d;
-}
-
-.rank-info {
-  display: grid;
-  gap: 4px;
-}
-
-.rank-title {
-  margin: 0;
-  font-size: 14px;
-  color: #111827;
-}
-
-.rank-amount {
-  margin: 0;
-  font-size: 13px;
-  color: #f97316;
-  font-weight: 700;
-}
-
-.rank-thumb {
-  width: 88px;
-  height: 54px;
-  border-radius: 10px;
-  object-fit: cover;
-}
-
-.expected-top {
-  display: grid;
-  grid-template-columns: 120px 1fr;
-  gap: 12px;
-  padding: 10px;
-  border-radius: 12px;
-  background: #fff8f0;
-  margin-bottom: 12px;
-}
-
-.expected-thumb {
-  width: 120px;
-  height: 150px;
-  border-radius: 10px;
-  background-size: cover;
-  background-position: center;
-}
-
-.expected-info {
-  display: grid;
-  gap: 6px;
-}
-
-.expected-title {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 700;
-  color: #111827;
-}
-
-.expected-release {
-  margin: 0;
-  font-size: 13px;
-  color: #6b7280;
-}
-
-.expected-wish {
-  margin: 0;
-  font-size: 14px;
-  color: #f59e0b;
-  font-weight: 700;
-}
-
-.expected-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.expected-card {
-  background: #ffffff;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-}
-
-.expected-card-thumb {
-  position: relative;
-  height: 120px;
-  background-size: cover;
-  background-position: center;
-}
-
-.expected-badge {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  padding: 4px 8px;
-  border-radius: 10px;
-  background: #f97316;
-  color: #ffffff;
-  font-weight: 700;
-  font-size: 12px;
-}
-
-.expected-card-body {
-  padding: 10px 12px 12px;
-  display: grid;
-  gap: 4px;
-}
-
-.expected-card-title {
-  margin: 0;
-  font-size: 14px;
-  color: #111827;
-  font-weight: 700;
-}
-
-.expected-card-wish {
-  margin: 0;
-  font-size: 13px;
-  color: #f59e0b;
-  font-weight: 700;
-}
-
-.expected-list {
-  margin-top: 4px;
-}
+.rank-info { flex: 1; .rank-title { font-size: 14px; font-weight: 600; margin: 0; } .rank-amount { font-size: 12px; color: #6b7280; margin: 0; } }
+.rank-thumb { width: 60px; height: 40px; border-radius: 4px; object-fit: cover; }
 </style>

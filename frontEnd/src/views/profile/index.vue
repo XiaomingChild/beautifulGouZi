@@ -4,12 +4,11 @@
       <!-- 左侧菜单 -->
       <aside class="profile-sidebar">
         <div class="user-brief">
-          <div class="avatar-wrapper">
+          <div class="avatar-wrapper" @click="router.push('/avatar-select')">
             <img :src="user.avatar || defaultAvatar" alt="用户头像" />
             <div class="upload-mask">修改头像</div>
           </div>
-          <h3 class="user-name">{{ user.account || '未登录' }}</h3>
-          <p class="user-id">ID: 8848123</p>
+          <h3 class="user-name">{{ user.nickname || user.account || '未登录' }}</h3>
         </div>
         
         <nav class="side-menu">
@@ -49,7 +48,7 @@
               <el-input v-model="profileData.bio" type="textarea" :rows="3" placeholder="介绍一下自己吧" />
             </div>
             <div class="form-actions">
-              <button class="btn-save" @click="saveProfile">保存修改</button>
+              <button class="btn-save" :loading="saving" @click="saveProfile">保存修改</button>
             </div>
           </div>
         </section>
@@ -69,7 +68,6 @@
               </div>
               <div class="order-body">
                 <div class="movie-info">
-                  <img :src="getMoviePoster(order.movieId)" class="order-poster" />
                   <div class="detail">
                     <h4 class="title">《{{ order.movieTitle }}》</h4>
                     <p class="cinema">{{ order.cinemaName }}</p>
@@ -90,9 +88,30 @@
 
         <!-- 我的收藏 -->
         <section v-if="activeTab === 'favorites'" class="content-section">
-          <h2 class="section-head">想看列表</h2>
-          <!-- 这里可以渲染收藏的电影卡片 -->
-          <div class="empty-state">暂无收藏内容</div>
+          <h2 class="section-head">我的收藏</h2>
+          <div v-if="favoriteMovies.length === 0" class="empty-state">
+            <img src="https://p0.meituan.net/movie/60fd63e6e185f577f8841804f32650051234.png" alt="" />
+            <p>您还没有收藏任何电影</p>
+          </div>
+          <div v-else class="favorite-grid">
+            <div 
+              v-for="movie in favoriteMovies" 
+              :key="movie.id" 
+              class="fav-card"
+              @click="goDetail(movie.id)"
+            >
+              <div class="fav-poster-wrapper">
+                <img :src="movie.posterUrl" class="fav-poster" />
+                <div class="remove-btn" @click.stop="handleRemoveFavorite(movie.id)">
+                  <el-icon><Close /></el-icon>
+                </div>
+              </div>
+              <div class="fav-info">
+                <h4 class="fav-title">{{ movie.title }}</h4>
+                <p class="fav-meta">{{ movie.genre }} · {{ movie.rating }}分</p>
+              </div>
+            </div>
+          </div>
         </section>
       </main>
     </div>
@@ -101,19 +120,24 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, watch } from 'vue';
-import { useRoute } from 'vue-router';
-import { User, Ticket, Star, Setting } from '@element-plus/icons-vue';
+import { useRoute, useRouter } from 'vue-router';
+import { User, Ticket, Star, Setting, Close } from '@element-plus/icons-vue';
 import { storeToRefs } from 'pinia';
 import { useUserStore } from "../../store/userInfo";
-import { userOrders, movies } from '../../mock/data';
+import { userOrders } from '../../mock/data';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { updateUserInfoApi } from '../../api/user';
+import { getMoviesByIdsApi, toggleFavoriteApi } from '../../api/movie';
 
 const route = useRoute();
+const router = useRouter();
 const userStore = useUserStore();
 const { state: user } = storeToRefs(userStore);
 
-const defaultAvatar = 'https://p0.meituan.net/movie/7e4334033ce546f332612a8385750f7510702.png';
+const defaultAvatar = new URL('../../assets/avatar/avatar1.png', import.meta.url).href;
 const activeTab = ref('profile');
+const saving = ref(false);
+const favoriteMovies = ref<any[]>([]);
 
 const menuItems = [
   { id: 'profile', label: '基本设置', icon: User },
@@ -123,15 +147,42 @@ const menuItems = [
 ];
 
 const profileData = reactive({
-  nickname: '影院常客',
-  phone: '138****8888',
-  bio: '爱电影，爱生活。'
+  nickname: user.value.nickname,
+  phone: user.value.phone,
+  bio: user.value.bio
 });
 
 const orderList = ref(userOrders);
 
-const getMoviePoster = (id: number) => {
-  return movies.find(m => m.id === id)?.imgUrl || '';
+// 加载收藏的电影详情
+const loadFavoriteMovies = async () => {
+  if (!user.value.selected || user.value.selected.length === 0) {
+    favoriteMovies.value = [];
+    return;
+  }
+  try {
+    const res: any = await getMoviesByIdsApi(user.value.selected);
+    favoriteMovies.value = res || [];
+  } catch (error) {
+    console.error('Failed to load favorite movies:', error);
+  }
+};
+
+const goDetail = (id: number) => {
+  router.push(`/movieDetail/${id}`);
+};
+
+const handleRemoveFavorite = async (movieId: number) => {
+  try {
+    const res: any = await toggleFavoriteApi(Number(user.value.id), movieId);
+    // 同步到全局 Store
+    userStore.setUserInfo({ selected: res || [] });
+    // 本地列表即时过滤
+    favoriteMovies.value = favoriteMovies.value.filter(m => m.id !== movieId);
+    ElMessage.success('已移出收藏');
+  } catch (error) {
+    ElMessage.error('操作失败');
+  }
 };
 
 const showTicketCode = (order: any) => {
@@ -146,21 +197,64 @@ const showTicketCode = (order: any) => {
   );
 };
 
-const saveProfile = () => {
-  ElMessage.success('个人信息保存成功');
+const saveProfile = async () => {
+  if (!user.value.id) {
+    ElMessage.error('用户未登录');
+    return;
+  }
+  
+  saving.value = true;
+  try {
+    const res: any = await updateUserInfoApi({
+      id: user.value.id,
+      nickname: profileData.nickname,
+      phone: profileData.phone,
+      bio: profileData.bio
+    });
+    
+    if (res && typeof res === 'object' && res.id) {
+      userStore.setUserInfo({
+        nickname: res.nickname,
+        phone: res.phone,
+        bio: res.bio
+      });
+      ElMessage.success('个人信息保存成功');
+    } else {
+      ElMessage.error(res || '保存失败');
+    }
+  } catch (error) {
+    console.error('Update profile failed:', error);
+  } finally {
+    saving.value = false;
+  }
 };
 
 onMounted(() => {
   if (route.query.tab) {
     activeTab.value = route.query.tab as string;
   }
-});
-
-watch(() => route.query.tab, (newVal) => {
-  if (newVal) {
-    activeTab.value = newVal as string;
+  if (activeTab.value === 'favorites') {
+    loadFavoriteMovies();
   }
 });
+
+watch(activeTab, (newVal) => {
+  if (newVal === 'favorites') {
+    loadFavoriteMovies();
+  }
+});
+
+watch(() => user.value.selected, () => {
+  if (activeTab.value === 'favorites') {
+    loadFavoriteMovies();
+  }
+}, { deep: true });
+
+watch(user, (newVal) => {
+  profileData.nickname = newVal.nickname;
+  profileData.phone = newVal.phone;
+  profileData.bio = newVal.bio;
+}, { deep: true });
 </script>
 
 <style lang="scss" scoped>
@@ -204,8 +298,7 @@ watch(() => route.query.tab, (newVal) => {
         }
         &:hover .upload-mask { opacity: 1; }
       }
-      .user-name { font-size: 18px; font-weight: 700; color: #1f2937; margin-bottom: 4px; }
-      .user-id { font-size: 12px; color: #9ca3af; }
+      .user-name { font-size: 18px; font-weight: 700; color: #1f2937; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     }
 
     .side-menu {
@@ -268,7 +361,6 @@ watch(() => route.query.tab, (newVal) => {
           
           .movie-info {
             display: flex; gap: 16px;
-            .order-poster { width: 60px; height: 84px; object-fit: cover; border-radius: 4px; }
             .detail {
               .title { font-size: 16px; font-weight: 700; margin-bottom: 6px; color: #1f2937; }
               .cinema { font-size: 13px; color: #4b5563; margin-bottom: 4px; }
@@ -291,6 +383,77 @@ watch(() => route.query.tab, (newVal) => {
               &:hover { background: #15b8a6; color: #fff; }
             }
           }
+        }
+      }
+    }
+
+    .favorite-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 24px;
+      
+      .fav-card {
+        cursor: pointer;
+        transition: all 0.3s;
+        
+        .fav-poster-wrapper {
+          position: relative;
+          width: 100%;
+          aspect-ratio: 2/3;
+          margin-bottom: 12px;
+          border-radius: 12px;
+          overflow: hidden;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+
+          .fav-poster {
+            width: 100%; height: 100%; object-fit: cover;
+            transition: transform 0.5s;
+          }
+
+          .remove-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 28px;
+            height: 28px;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            color: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 2;
+
+            &:hover {
+              background: #ef4444;
+              transform: scale(1.1) !important;
+            }
+          }
+        }
+
+        &:hover {
+          transform: translateY(-5px);
+          .fav-poster { transform: scale(1.05); }
+          .remove-btn { opacity: 1; transform: scale(1); }
+        }
+        
+        .fav-title {
+          font-size: 15px;
+          font-weight: 700;
+          color: #1f2937;
+          margin-bottom: 4px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        
+        .fav-meta {
+          font-size: 12px;
+          color: #9ca3af;
         }
       }
     }

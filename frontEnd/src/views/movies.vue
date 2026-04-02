@@ -43,27 +43,27 @@
 
       <div class="movie-grid">
         <article 
-          v-for="movie in filteredMovies" 
+          v-for="movie in movieList" 
           :key="movie.id" 
           class="movie-card"
           @click="goDetail(movie.id)"
         >
           <div class="poster">
-            <img :src="movie.imgUrl" alt="" />
-            <div class="score" v-if="movie.status === 'now'">{{ movie.rating }}</div>
-            <div class="wish" v-else>{{ movie.wishes }}人想看</div>
+            <img :src="movie.posterUrl" alt="" />
+            <div class="score" v-if="activeStatus === 'now'">{{ movie.rating }}</div>
+            <div class="wish" v-else>期待上映</div>
           </div>
           <div class="info">
             <h3 class="title">{{ movie.title }}</h3>
-            <p class="type">{{ movie.tags.join('/') }}</p>
-            <button class="btn-action" :class="movie.status">
-              {{ movie.status === 'now' ? '购票' : '预售' }}
+            <p class="type">{{ movie.genre }}</p>
+            <button class="btn-action" :class="activeStatus === 'now' ? 'now' : 'soon'">
+              {{ activeStatus === 'now' ? '购票' : '预售' }}
             </button>
           </div>
         </article>
       </div>
       
-      <div v-if="filteredMovies.length === 0" class="empty">
+      <div v-if="movieList.length === 0" class="empty">
         暂无匹配电影
       </div>
     </main>
@@ -71,35 +71,49 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { movies } from '../mock/data';
+import { getHotMoviesApi, getUpcomingMoviesApi, getMoviesByCategoryApi } from '../api/movie';
 
 const router = useRouter();
 const activeCategory = ref('all');
 const activeStatus = ref('now');
+const movieList = ref<any[]>([]);
 
 const categories = [
   { label: '全部', value: 'all' },
-  { label: '正在热映', value: 'now_playing' },
-  { label: '剧情', value: 'drama' },
-  { label: '动作', value: 'action' },
-  { label: '喜剧', value: 'comedy' },
-  { label: '科幻', value: 'scifi' },
-  { label: '动画', value: 'animation' },
+  { label: '剧情', value: '剧情' },
+  { label: '动作', value: '动作' },
+  { label: '喜剧', value: '喜剧' },
+  { label: '科幻', value: '科幻' },
+  { label: '动画', value: '动画' },
 ];
 
-const filteredMovies = computed(() => {
-  return movies.filter(m => {
-    const statusMatch = m.status === activeStatus.value;
-    const catMatch = activeCategory.value === 'all' || m.category === activeCategory.value;
-    return statusMatch && catMatch;
-  });
+const loadMovies = async () => {
+  try {
+    let res: any;
+    if (activeStatus.value === 'now') {
+      res = await getHotMoviesApi(activeCategory.value);
+    } else {
+      res = await getUpcomingMoviesApi(activeCategory.value);
+    }
+    movieList.value = res?.content || [];
+  } catch (error) {
+    console.error('Failed to load movies:', error);
+  }
+};
+
+watch([activeCategory, activeStatus], () => {
+  loadMovies();
 });
 
 const goDetail = (id: number) => {
   router.push(`/movieDetail/${id}`);
 };
+
+onMounted(() => {
+  loadMovies();
+});
 </script>
 
 <style lang="scss" scoped>

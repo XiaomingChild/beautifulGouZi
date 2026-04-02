@@ -7,6 +7,7 @@ import RegisterView from '../views/register.vue'
 import MovieDetailView from '../views/movieDetail.vue'
 import SeatSelectionView from '../views/seatSelection.vue'
 import ProfileView from '../views/profile/index.vue'
+import AvatarSelectView from '../views/profile/AvatarSelect.vue'
 import MoviesView from '../views/movies.vue'
 import CinemasView from '../views/cinemas.vue'
 
@@ -64,6 +65,12 @@ const router = createRouter({
       name: 'profile',
       component: ProfileView,
       meta: { title: '个人中心', requiresAuth: true },
+    },
+    {
+      path: '/avatar-select',
+      name: 'avatarSelect',
+      component: AvatarSelectView,
+      meta: { title: '更换头像', requiresAuth: true },
     }
   ],
 })

@@ -16,8 +16,24 @@
           <el-form-item label="账号" prop="account" class="form-item">
             <el-input
               v-model="form.account"
-              placeholder="请输入用户名或邮箱"
+              placeholder="请输入用户名"
               autocomplete="username"
+              class="form-input"
+            />
+          </el-form-item>
+
+          <el-form-item label="昵称" prop="nickname" class="form-item">
+            <el-input
+              v-model="form.nickname"
+              placeholder="请输入昵称"
+              class="form-input"
+            />
+          </el-form-item>
+
+          <el-form-item label="手机号" prop="phone" class="form-item">
+            <el-input
+              v-model="form.phone"
+              placeholder="请输入手机号"
               class="form-input"
             />
           </el-form-item>
@@ -64,12 +80,6 @@
           </el-form-item>
         </el-form>
 
-        <div class="login-divider"><span>或使用其他方式注册</span></div>
-        <div class="login-providers">
-          <button type="button" class="provider">微博</button>
-          <button type="button" class="provider">微信</button>
-          <button type="button" class="provider">QQ</button>
-        </div>
         <p class="login-footer">
           已有账户？
           <a class="login-link" href="#" @click.prevent="goLogin">返回登录</a>
@@ -83,15 +93,17 @@
 import { reactive, ref } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useRouter } from 'vue-router'
-import { useUserStore } from '../store/userInfo'
+import { ElMessage } from 'element-plus'
+import { registerApi } from '../api/user'
 
 const formRef = ref<FormInstance>()
 const submitting = ref(false)
 const router = useRouter()
-const userStore = useUserStore()
 
 const form = reactive({
   account: '',
+  nickname: '',
+  phone: '',
   password: '',
   confirmPassword: '',
   agree: false,
@@ -99,6 +111,11 @@ const form = reactive({
 
 const rules: FormRules = {
   account: [{ required: true, message: '请输入账号', trigger: 'blur' }],
+  nickname: [{ required: true, message: '请输入昵称', trigger: 'blur' }],
+  phone: [
+    { required: true, message: '请输入手机号', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '手机号格式错误', trigger: 'blur' }
+  ],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
   confirmPassword: [
     { required: true, message: '请再次输入密码', trigger: 'blur' },
@@ -117,24 +134,26 @@ const onSubmit = () => {
   formRef.value.validate(async (valid) => {
     if (!valid) return
     if (!form.agree) {
-      console.warn('请先勾选并同意协议')
+      ElMessage.warning('请先勾选并同意协议')
       return
     }
     submitting.value = true
     try {
-      // 模拟注册成功
-      console.log('提交注册', { ...form })
-      
-      // 注册成功后，自动登录
-      localStorage.setItem('token', '2281363011');
-      userStore.setUserInfo({
+      const res: any = await registerApi({
         account: form.account,
-        token: '2281363011',
-      });
-      
-      // 跳转到首页
-      router.push('/home');
+        nickname: form.nickname,
+        phone: form.phone,
+        password: form.password
+      })
 
+      if (res && typeof res === 'object' && res.id) {
+        ElMessage.success('注册成功，请登录')
+        router.push('/login') // 跳转到登录页
+      } else {
+        ElMessage.error(res || '注册失败')
+      }
+    } catch (error) {
+      console.error('Register error:', error)
     } finally {
       submitting.value = false
     }
@@ -157,32 +176,28 @@ const goLogin = () => {
 .login-visual {
   width: 50%;
   min-height: 100vh;
-   background-image:
-    linear-gradient(
-          90deg,
-          rgba(255, 255, 255, 0) 0%,
-          rgba(255, 255, 255, 0.15) 40%,
-          rgba(255, 255, 255, 0.7) 70%,
-         rgba(255, 255, 255, 1) 100%
-       ),
-    url('../assets/login/loginBG.png');
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.15) 40%,
+    rgba(255, 255, 255, 0.7) 70%,
+    rgba(255, 255, 255, 1) 100%
+  ),
+  url('../assets/login/loginBG.png');
   background-size: cover;
   background-position: center;
-  background-color: lin;
 }
 
 .login-panel {
   width: 50%;
-  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: left;
-  background: #ffffff;
 }
 
 .login-panel-inner {
   width: 600px;
-  padding: 0 0 0 60px;
+  padding: 0 60px;
 }
 
 .login-title {
@@ -190,149 +205,36 @@ const goLogin = () => {
   font-weight: 600;
   color: #111827;
   text-align: center;
-  margin: 0 0 8px;
 }
 
 .login-subtitle {
   font-size: 13px;
   color: #9ca3af;
   text-align: center;
-  margin: 0 0 20px;
+  margin-bottom: 24px;
 }
 
 .login-form {
-  display: grid;
-  gap: 18px;
   width: 420px;
-  max-width: 100%;
   margin: 0 auto;
-}
-
-.form-item {
-  margin-bottom: 4px;
-}
-
-.agreement-item {
-  margin: 8px 0 4px;
-}
-
-:deep(.el-form-item__label) {
-  color: #374151;
-  font-size: 13px;
-}
-
-:deep(.form-input .el-input__wrapper) {
-  box-shadow: none;
-  border-radius: 8px;
-  padding: 0 12px;
-  height: 44px;
-  border: 1px solid #e5e7eb;
-}
-
-:deep(.form-input .el-input__wrapper.is-focus) {
-  border-color: #8ea8ff;
-  box-shadow: 0 0 0 3px rgba(142, 168, 255, 0.18);
-}
-
-:deep(.el-form-item__error) {
-  margin-top: 4px;
-  font-size: 12px;
-}
-
-.form-error {
-  font-size: 12px;
-  color: #e53935;
 }
 
 .login-button {
-  margin-top: 8px;
+  width: 100%;
   height: 44px;
-  border: none;
   border-radius: 8px;
-  background: #8ea8ff;
-  color: #ffffff;
-  font-size: 14px;
+  background: #4770fa;
   font-weight: 600;
-  cursor: pointer;
-  width: 100%;
-}
-
-.login-button:hover {
-  background: #7b99ff;
-}
-
-.login-divider {
-  margin: 26px auto 18px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: #9ca3af;
-  font-size: 12px;
-  width: 420px;
-  max-width: 100%;
-}
-
-.login-divider::before,
-.login-divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: #e5e7eb;
-}
-
-.login-providers {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin: 0 auto 18px;
-  width: 420px;
-  max-width: 100%;
-}
-
-.provider {
-  height: 36px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #ffffff;
-  color: #4b5563;
-  font-size: 12px;
-  cursor: pointer;
-  width: 100%;
-}
-
-.provider:hover {
-  border-color: #c7d4ff;
-  color: #5a74f5;
 }
 
 .login-footer {
-  font-size: 12px;
-  color: #6b7280;
   text-align: center;
-  margin: 0 auto;
-  width: 420px;
-  max-width: 100%;
+  margin-top: 24px;
+  font-size: 13px;
 }
 
 .login-link {
   color: #4b61f7;
   text-decoration: none;
-  margin-left: 4px;
-}
-
-.login-agreement {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  font-size: 12px;
-  color: #6b7280;
-}
-
-.login-agreement input {
-  margin-top: 2px;
-}
-
-.login-agreement .login-link {
-  margin: 0 2px;
 }
 </style>
