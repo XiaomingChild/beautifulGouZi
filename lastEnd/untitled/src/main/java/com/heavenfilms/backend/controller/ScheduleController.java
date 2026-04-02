@@ -1,16 +1,13 @@
 package com.heavenfilms.backend.controller;
 
-import com.heavenfilms.backend.entity.Cinema;
+import com.heavenfilms.backend.common.Result;
 import com.heavenfilms.backend.entity.Schedule;
-import com.heavenfilms.backend.repository.CinemaRepository;
-import com.heavenfilms.backend.repository.ScheduleRepository;
+import com.heavenfilms.backend.service.ScheduleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/schedules")
@@ -18,34 +15,17 @@ import java.util.stream.Collectors;
 public class ScheduleController {
 
     @Autowired
-    private ScheduleRepository scheduleRepository;
+    private ScheduleService scheduleService;
 
-    @Autowired
-    private CinemaRepository cinemaRepository;
-
-    /**
-     * 获取指定电影在各影院的排片情况
-     * 返回结构：List<{ cinema: Cinema, schedules: List<Schedule> }>
-     */
     @GetMapping("/movie/{movieId}")
-    public List<Map<String, Object>> getSchedulesByMovie(@PathVariable Integer movieId) {
-        List<Schedule> allSchedules = scheduleRepository.findByMovieIdOrderByStartTimeAsc(movieId);
-
-        // 按影院 ID 分组
-        Map<Integer, List<Schedule>> groupedByCinema = allSchedules.stream()
-                .collect(Collectors.groupingBy(Schedule::getCinemaId));
-
-        return groupedByCinema.entrySet().stream().map(entry -> {
-            Map<String, Object> map = new HashMap<>();
-            Cinema cinema = cinemaRepository.findById(entry.getKey()).orElse(null);
-            map.put("cinema", cinema);
-            map.put("schedules", entry.getValue());
-            return map;
-        }).collect(Collectors.toList());
+    public Result<List<Map<String, Object>>> getSchedulesByMovie(@PathVariable Integer movieId) {
+        List<Map<String, Object>> schedules = scheduleService.getSchedulesByMovie(movieId);
+        return Result.success(schedules);
     }
 
     @GetMapping("/{id}")
-    public Schedule getScheduleById(@PathVariable Integer id) {
-        return scheduleRepository.findById(id).orElse(null);
+    public Result<Schedule> getScheduleById(@PathVariable Integer id) {
+        Schedule schedule = scheduleService.getScheduleById(id);
+        return Result.success(schedule);
     }
 }

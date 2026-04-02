@@ -1,16 +1,13 @@
 package com.heavenfilms.backend.controller;
 
+import com.heavenfilms.backend.common.Result;
 import com.heavenfilms.backend.entity.Movie;
-import com.heavenfilms.backend.repository.MovieRepository;
+import com.heavenfilms.backend.service.MovieService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Date;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/movies")
@@ -18,54 +15,49 @@ import java.util.stream.Collectors;
 public class MovieController {
 
     @Autowired
-    private MovieRepository movieRepository;
+    private MovieService movieService;
 
     @GetMapping("/ranking")
-    public List<Movie> getRanking() {
-        return movieRepository.findAll(Sort.by(Sort.Direction.DESC, "rating")).stream()
-                .limit(10)
-                .collect(Collectors.toList());
+    public Result<List<Movie>> getRanking() {
+        return Result.success(movieService.getRanking());
     }
 
     @GetMapping("/hot")
-    public Page<Movie> getHotMovies(
+    public Result<Page<Movie>> getHotMovies(
             @RequestParam(defaultValue = "all") String genre,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return movieRepository.findHotMovies(new Date(), genre, 
-                PageRequest.of(page, size, Sort.by("releaseDate").descending()));
+        return Result.success(movieService.getHotMovies(genre, page, size));
     }
 
     @GetMapping("/upcoming")
-    public Page<Movie> getUpcomingMovies(
+    public Result<Page<Movie>> getUpcomingMovies(
             @RequestParam(defaultValue = "all") String genre,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return movieRepository.findUpcomingMovies(new Date(), genre, 
-                PageRequest.of(page, size, Sort.by("releaseDate").ascending()));
+        return Result.success(movieService.getUpcomingMovies(genre, page, size));
     }
 
     @GetMapping("/category/{tag}")
-    public Page<Movie> getMoviesByTag(
+    public Result<Page<Movie>> getMoviesByTag(
             @PathVariable String tag,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return movieRepository.findHotMovies(new Date(), tag, PageRequest.of(page, size));
+        return Result.success(movieService.getMoviesByTag(tag, page, size));
     }
 
     @GetMapping("/{id}")
-    public Movie getMovieById(@PathVariable Integer id) {
-        return movieRepository.findById(id).orElse(null);
+    public Result<Movie> getMovieById(@PathVariable Integer id) {
+        return Result.success(movieService.getMovieById(id));
     }
 
     @GetMapping("/all")
-    public List<Movie> getAllMovies() {
-        return movieRepository.findAll();
+    public Result<List<Movie>> getAllMovies() {
+        return Result.success(movieService.getAllMovies());
     }
 
     @PostMapping("/list")
-    public List<Movie> getMoviesByIds(@RequestBody List<Integer> ids) {
-        if (ids == null || ids.isEmpty()) return new java.util.ArrayList<>();
-        return movieRepository.findAllById(ids);
+    public Result<List<Movie>> getMoviesByIds(@RequestBody List<Integer> ids) {
+        return Result.success(movieService.getMoviesByIds(ids));
     }
 }

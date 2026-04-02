@@ -1,13 +1,12 @@
 package com.heavenfilms.backend.controller;
 
-import com.heavenfilms.backend.entity.User;
-import com.heavenfilms.backend.repository.UserRepository;
+import com.heavenfilms.backend.common.Result;
+import com.heavenfilms.backend.service.FavoriteService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/favorites")
@@ -15,34 +14,19 @@ import java.util.Optional;
 public class FavoriteController {
 
     @Autowired
-    private UserRepository userRepository;
+    private FavoriteService favoriteService;
 
     @PostMapping("/toggle")
-    public List<Integer> toggle(@RequestBody java.util.Map<String, Integer> payload) {
+    public Result<List<Integer>> toggle(@RequestBody Map<String, Integer> payload) {
         Integer userId = payload.get("userId");
         Integer movieId = payload.get("movieId");
-
-        Optional<User> userOpt = userRepository.findById(userId);
-        if (userOpt.isPresent()) {
-            User user = userOpt.get();
-            if (user.getSelected() == null) user.setSelected(new ArrayList<>());
-            
-            List<Integer> list = user.getSelected();
-            if (list.contains(movieId)) {
-                list.remove(movieId);
-            } else {
-                list.add(movieId);
-            }
-            userRepository.save(user);
-            return list;
-        }
-        return new ArrayList<>();
+        List<Integer> list = favoriteService.toggle(userId, movieId);
+        return Result.success(list);
     }
 
     @GetMapping("/user/{userId}")
-    public List<Integer> getUserFavoriteMovieIds(@PathVariable Integer userId) {
-        return userRepository.findById(userId)
-                .map(u -> u.getSelected() != null ? u.getSelected() : new ArrayList<Integer>())
-                .orElse(new ArrayList<>());
+    public Result<List<Integer>> getUserFavoriteMovieIds(@PathVariable Integer userId) {
+        List<Integer> list = favoriteService.getUserFavoriteMovieIds(userId);
+        return Result.success(list);
     }
 }

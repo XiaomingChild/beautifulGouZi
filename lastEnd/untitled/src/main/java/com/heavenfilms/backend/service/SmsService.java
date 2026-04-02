@@ -13,16 +13,16 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class SmsService {
 
-    @Value("${aliyun.sms.accessKeyId}")
+    @Value("${aliyun.sms.accessKeyId:}")
     private String accessKeyId;
 
-    @Value("${aliyun.sms.accessKeySecret}")
+    @Value("${aliyun.sms.accessKeySecret:}")
     private String accessKeySecret;
 
-    @Value("${aliyun.sms.signName}")
+    @Value("${aliyun.sms.signName:}")
     private String signName;
 
-    @Value("${aliyun.sms.templateCode}")
+    @Value("${aliyun.sms.templateCode:}")
     private String templateCode;
 
     private final Map<String, String> verifyCodeStore = new ConcurrentHashMap<>();
