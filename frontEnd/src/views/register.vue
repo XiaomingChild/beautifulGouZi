@@ -83,10 +83,12 @@
 import { reactive, ref } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useRouter } from 'vue-router'
+import { useUserStore } from '../store/userInfo'
 
 const formRef = ref<FormInstance>()
 const submitting = ref(false)
 const router = useRouter()
+const userStore = useUserStore()
 
 const form = reactive({
   account: '',
@@ -120,8 +122,19 @@ const onSubmit = () => {
     }
     submitting.value = true
     try {
+      // 模拟注册成功
       console.log('提交注册', { ...form })
-      // await register API...
+      
+      // 注册成功后，自动登录
+      localStorage.setItem('token', '2281363011');
+      userStore.setUserInfo({
+        account: form.account,
+        token: '2281363011',
+      });
+      
+      // 跳转到首页
+      router.push('/home');
+
     } finally {
       submitting.value = false
     }

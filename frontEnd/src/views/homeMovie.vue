@@ -20,7 +20,7 @@
               <h1 class="hero-title">《{{ item.title }}》特别放映</h1>
               <p class="hero-subtitle">{{ item.desc }}</p>
               <div class="hero-actions">
-                <button class="cta" type="button" @click="goDetail">立即购票</button>
+                <button class="cta" type="button" @click="goDetail(item.id)">立即购票</button>
               </div>
             </div>
           </div>
@@ -56,7 +56,7 @@
               v-for="movie in limitedNowPlaying"
               :key="movie.id"
               class="card"
-              @click="goDetail"
+              @click="goDetail(movie.id)"
             >
               <div class="poster" :style="{ backgroundImage: `url(${movie.imgUrl})` }">
                 <span class="rating">{{ movie.rating }}</span>
@@ -80,7 +80,7 @@
                 <div class="tags">
                   <span v-for="tag in movie.tags" :key="tag" class="tag">{{ tag }}</span>
                 </div>
-                <button class="buy" type="button" @click.stop="goDetail">购票</button>
+                <button class="buy" type="button" @click.stop="goDetail(movie.id)">购票</button>
               </div>
             </article>
           </div>
@@ -96,7 +96,7 @@
               v-for="movie in limitedComingSoon"
               :key="movie.id"
               class="card"
-              @click="goDetail"
+              @click="goDetail(movie.id)"
             >
               <div class="poster" :style="{ backgroundImage: `url(${movie.imgUrl})` }">
                 <span class="rating">{{ movie.rating }}</span>
@@ -588,8 +588,8 @@ const handleCategoryClick = (cat: string) => {
   activeCategory.value = cat;
 };
 
-const goDetail = () => {
-  router.push('/homeMovie');
+const goDetail = (id: number) => {
+  router.push(`/movieDetail/${id}`);
 };
 
 const toggleLike = (movie: Movie, e: Event) => {

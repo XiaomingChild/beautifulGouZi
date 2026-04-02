@@ -85,17 +85,17 @@ const rules: FormRules = {
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
 };
 
-const checkInfo = (account,password) => {
-  //检查账号密码是否正确
-  const adminInfo = {
-        name: 'admin',
-        password: 'tiantangfilms2026'
-      };
-  if(adminInfo.name === account && adminInfo.password === password){
-    return true;
-  }else{
-    return false;
-  }
+const checkInfo = (account, password) => {
+  // 模拟用户数据库
+  const users = {
+    admin: 'tiantangfilms2026',
+    user1: '123456',
+    user2: '123456',
+    user3: '123456',
+  };
+
+  // 检查账号是否存在且密码匹配
+  return users[account] && users[account] === password;
 }
 const onSubmit = () => {
   if (!formRef.value) return;
@@ -111,13 +111,18 @@ const onSubmit = () => {
       //调用登录接口
       const weatherLogin = checkInfo(form.account, form.password);
       if (weatherLogin) {
-        // 登录成功，跳转到首页
-        userStore.setUserInfo({//更新pinia数据
+        // 登录成功，设置 token
+        localStorage.setItem('token', '2281363011');
+        // 更新pinia数据
+        userStore.setUserInfo({
           account: form.account,
+          token: '2281363011',
         });
+        // 跳转到首页
         router.push('/home');
       } else {
-        
+        // 可以在这里添加登录失败的提示
+        console.error('账号或密码错误');
       }
     } finally {
       submitting.value = false;

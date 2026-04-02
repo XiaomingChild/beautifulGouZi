@@ -17,9 +17,8 @@
       </div>
       <nav class="menu">
         <RouterLink to="/home" class="menu-link" active-class="is-active">首页</RouterLink>
-        <RouterLink to="/home" class="menu-link">电影</RouterLink>
-        <RouterLink to="/home" class="menu-link">影院</RouterLink>
-        <RouterLink to="/home" class="menu-link">我的</RouterLink>
+        <RouterLink to="/movies" class="menu-link" active-class="is-active">电影</RouterLink>
+        <RouterLink to="/cinemas" class="menu-link" active-class="is-active">影院</RouterLink>
       </nav>
       <div class="actions">
         <template v-if="!user.account">
@@ -68,10 +67,10 @@ const router = useRouter();
 const menuOpen = ref(false);
 const chipRef = ref<HTMLElement | null>(null);
 const menuItems = [
-  { tab: 'profile', label: '个人详情' },
-  { tab: 'records', label: '观影记录' },
-  { tab: 'favorites', label: '收藏清单' },
-  { tab: 'security', label: '账号设置' },
+  { tab: 'profile', label: '基本设置' },
+  { tab: 'records', label: '我的订单' },
+  { tab: 'favorites', label: '我的收藏' },
+  { tab: 'security', label: '账号安全' },
 ];
 
 const goHome = () => router.push('/home');
@@ -163,7 +162,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 100px;
+  gap: 150px;
 }
 
 .menu-link {

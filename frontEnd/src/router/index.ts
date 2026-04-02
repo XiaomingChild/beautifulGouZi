@@ -4,19 +4,36 @@ import type { RouteLocationNormalized } from 'vue-router'
 import HomeView from '../views/home.vue'
 import LoginView from '../views/login.vue'
 import RegisterView from '../views/register.vue'
-import HomeMovieView from '../views/homeMovie.vue'
+import MovieDetailView from '../views/movieDetail.vue'
+import SeatSelectionView from '../views/seatSelection.vue'
+import ProfileView from '../views/profile/index.vue'
+import MoviesView from '../views/movies.vue'
+import CinemasView from '../views/cinemas.vue'
+
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    {//默认路由为home
+    {
       path: '/',
       redirect: '/home'
     },
     {
       path: '/home',
-      name: 'home-alias',
+      name: 'home',
       component: HomeView,
       meta: { title: '首页', requiresAuth: false }
+    },
+    {
+      path: '/movies',
+      name: 'movies',
+      component: MoviesView,
+      meta: { title: '电影列表', requiresAuth: false }
+    },
+    {
+      path: '/cinemas',
+      name: 'cinemas',
+      component: CinemasView,
+      meta: { title: '影院列表', requiresAuth: false }
     },
     {
       path: '/login',
@@ -31,30 +48,35 @@ const router = createRouter({
       meta: { title: '注册', requiresAuth: false },
     },
     {
-      path: '/homeMovie',
-      name: 'homeMovie',
-      component: HomeMovieView,
-      meta: { title: '电影详情', requiresAuth: true },
+      path: '/movieDetail/:id',
+      name: 'movieDetail',
+      component: MovieDetailView,
+      meta: { title: '电影详情', requiresAuth: false },
+    },
+    {
+      path: '/seatSelection',
+      name: 'seatSelection',
+      component: SeatSelectionView,
+      meta: { title: '选座购票', requiresAuth: true },
+    },
+    {
+      path: '/profile',
+      name: 'profile',
+      component: ProfileView,
+      meta: { title: '个人中心', requiresAuth: true },
     }
   ],
 })
-//路由前置守卫
+
+// 路由前置守卫
 router.beforeEach((to: RouteLocationNormalized) => {
-  //判断是否拦截
-  const requiresAuth = to.meta.requiresAuth !== false
+  const requiresAuth = to.meta.requiresAuth === true
   const token = localStorage.getItem('token')
 
-  if (!requiresAuth) {
-    return true
+  if (requiresAuth && !token) {
+    return { path: '/login' }
   }
-
-  if (token) {
-    return true
-  }
-
-  return {
-    path: '/login'
-  }
+  return true
 })
 
 export default router
