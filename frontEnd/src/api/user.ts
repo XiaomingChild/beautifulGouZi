@@ -1,11 +1,12 @@
 import request from '../utils/request';
+import type { User } from '../types';
 
 /**
  * 用户登录
  * @param data { account, password }
  */
 export function loginApi(data: any) {
-  return request({
+  return request<User>({
     url: '/users/login',
     method: 'post',
     data
@@ -17,7 +18,7 @@ export function loginApi(data: any) {
  * @param data { account, password, nickname, phone }
  */
 export function registerApi(data: any) {
-  return request({
+  return request<User>({
     url: '/users/register',
     method: 'post',
     data
@@ -25,10 +26,10 @@ export function registerApi(data: any) {
 }
 
 /**
- * 获取当前用户信息 (预留)
+ * 获取当前用户信息
  */
 export function getUserInfoApi(id: number) {
-  return request({
+  return request<User>({
     url: `/users/${id}`,
     method: 'get'
   });
@@ -39,7 +40,7 @@ export function getUserInfoApi(id: number) {
  * @param phone 手机号
  */
 export function sendSmsApi(phone: string) {
-  return request({
+  return request<string>({
     url: '/sms/send',
     method: 'get',
     params: { phone }
@@ -50,7 +51,7 @@ export function sendSmsApi(phone: string) {
  * 更新用户信息
  */
 export function updateUserInfoApi(data: any) {
-  return request({
+  return request<User>({
     url: '/users/update',
     method: 'post',
     data
@@ -61,7 +62,7 @@ export function updateUserInfoApi(data: any) {
  * 退出登录
  */
 export function logoutApi() {
-  return request({
+  return request<string>({
     url: '/users/logout',
     method: 'post'
   });

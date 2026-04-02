@@ -1,6 +1,6 @@
 <template>
   <div class="seat-selection">
-    <div class="selection-inner">
+    <div class="selection-inner" v-if="movie && schedule">
       <!-- 左侧选座区 -->
       <div class="seat-main">
         <div class="screen-area">
@@ -44,26 +44,26 @@
       <!-- 右侧订单确认 -->
       <aside class="order-side">
         <div class="movie-card">
-          <img :src="movie.imgUrl" class="poster" alt="" />
+          <img :src="movie.posterUrl" class="poster" alt="" />
           <div class="movie-info">
             <h3 class="title">{{ movie.title }}</h3>
-            <p class="meta">{{ movie.tags.join('/') }}</p>
-            <p class="meta">{{ movie.duration }}分钟</p>
+            <p class="meta">{{ movie.genre }}</p>
+            <p class="meta">{{ movie.durationMinutes }}分钟</p>
           </div>
         </div>
 
         <div class="showtime-info">
           <div class="info-row">
             <span class="label">影院：</span>
-            <span class="value">{{ schedule.cinemaName }}</span>
+            <span class="value">{{ cinemaName }}</span>
           </div>
           <div class="info-row">
             <span class="label">影厅：</span>
-            <span class="value">{{ schedule.hall }}</span>
+            <span class="value">{{ schedule.hallName }}</span>
           </div>
           <div class="info-row">
             <span class="label">场次：</span>
-            <span class="value accent">{{ schedule.startTime }} ({{ schedule.type }})</span>
+            <span class="value accent">{{ formatTime(schedule.startTime) }}</span>
           </div>
         </div>
 
@@ -96,20 +96,21 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { movies, schedules } from '../mock/data';
+import { getMovieDetailApi } from '../api/movie';
+import { getScheduleDetailApi } from '../api/schedule';
+import { createOrderApi, getSoldSeatsApi } from '../api/order';
+import { useUserStore } from '../store/userInfo';
+import type { Movie, Schedule } from '../types';
 
 const route = useRoute();
 const router = useRouter();
+const userStore = useUserStore();
+const scheduleId = Number(route.query.scheduleId);
 
-// 模拟数据初始化
-const movie = ref(movies[0]);
-const schedule = ref({
-  ...schedules[0],
-  cinemaName: '万达影城（CBD店）'
-});
-
-// 已售座位的简单模拟（随机几个座位）
-const soldSeats = ref(['2-4', '2-5', '5-7', '5-8', '8-1', '8-2']);
+const movie = ref<Movie | null>(null);
+const schedule = ref<Schedule | null>(null);
+const cinemaName = ref('加载中...');
+const soldSeats = ref<string[]>([]);
 
 interface SelectedSeat {
   id: string;
@@ -143,27 +144,81 @@ const toggleSeat = (row: number, col: number) => {
   }
 };
 
-const totalPrice = computed(() => selectedSeats.value.length * schedule.value.price);
+const totalPrice = computed(() => {
+  if (!schedule.value) return 0;
+  return selectedSeats.value.length * schedule.value.price;
+});
+
+const formatTime = (dateStr: string) => {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  return date.toLocaleString('zh-CN', { 
+    month: '2-digit', 
+    day: '2-digit', 
+    hour: '2-digit', 
+    minute: '2-digit', 
+    hour12: false 
+  });
+};
+
+const loadData = async () => {
+  try {
+    const scRes = await getScheduleDetailApi(scheduleId);
+    schedule.value = scRes;
+    
+    if (schedule.value) {
+      const movieRes = await getMovieDetailApi(schedule.value.movieId);
+      movie.value = movieRes;
+      
+      // 这里应该根据 cinemaId 获取影院名称，但为了简化先硬编码或从之前的页面带过来
+      cinemaName.value = '万达影城'; 
+      
+      const soldRes = await getSoldSeatsApi(scheduleId);
+      soldSeats.value = soldRes || [];
+    }
+  } catch (error) {
+    console.error('Failed to load seat selection data:', error);
+  }
+};
 
 const handleConfirm = () => {
+  if (!userStore.state.id) {
+    ElMessage.warning('请先登录');
+    router.push('/login');
+    return;
+  }
+
   ElMessageBox.confirm(
     `确认购买这 ${selectedSeats.value.length} 张票吗？共计 ￥${totalPrice.value.toFixed(2)}`,
     '确认购票',
     { confirmButtonText: '立即支付', cancelButtonText: '再选选' }
-  ).then(() => {
-    ElMessage.success('支付成功！正在为您生成取票码...');
-    setTimeout(() => {
-      router.push('/home'); // 实际应跳转到订单页
-    }, 1500);
+  ).then(async () => {
+    try {
+      const seatStr = selectedSeats.value.map(s => `${s.row}-${s.col}`).join(',');
+      await createOrderApi({
+        userId: userStore.state.id,
+        scheduleId: scheduleId,
+        seats: seatStr,
+        totalPrice: totalPrice.value
+      });
+      
+      ElMessage.success('支付成功！正在为您生成取票码...');
+      setTimeout(() => {
+        router.push('/home');
+      }, 1500);
+    } catch (error) {
+      console.error('Create order failed:', error);
+    }
   });
 };
 
 onMounted(() => {
-  // 逻辑：根据 query 参数加载场次信息...
+  loadData();
 });
 </script>
 
 <style lang="scss" scoped>
+/* Styles remain the same */
 .seat-selection {
   background: #f1f3f6;
   min-height: calc(100vh - 68px);

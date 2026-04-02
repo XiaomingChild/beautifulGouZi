@@ -1,34 +1,36 @@
 import request from '../utils/request';
+import type { Movie, PageResult, Schedule, Cinema } from '../types';
 
 /**
  * 获取正在热映电影
  */
-export function getHotMoviesApi(genre: string = 'all') {
-  return request({
+export function getHotMoviesApi(genre: string = 'all', page: number = 0, size: number = 10) {
+  return request<PageResult<Movie>>({
     url: '/movies/hot',
     method: 'get',
-    params: { genre }
+    params: { genre, page, size }
   });
 }
 
 /**
  * 获取即将上映电影
  */
-export function getUpcomingMoviesApi(genre: string = 'all') {
-  return request({
+export function getUpcomingMoviesApi(genre: string = 'all', page: number = 0, size: number = 10) {
+  return request<PageResult<Movie>>({
     url: '/movies/upcoming',
     method: 'get',
-    params: { genre }
+    params: { genre, page, size }
   });
 }
 
 /**
  * 根据分类获取电影
  */
-export function getMoviesByCategoryApi(tag: string) {
-  return request({
+export function getMoviesByCategoryApi(tag: string, page: number = 0, size: number = 10) {
+  return request<PageResult<Movie>>({
     url: `/movies/category/${tag}`,
-    method: 'get'
+    method: 'get',
+    params: { page, size }
   });
 }
 
@@ -36,17 +38,17 @@ export function getMoviesByCategoryApi(tag: string) {
  * 获取电影详情
  */
 export function getMovieDetailApi(id: number | string) {
-  return request({
+  return request<Movie>({
     url: `/movies/${id}`,
     method: 'get'
   });
 }
 
 /**
- * 获取电影排片场次
+ * 获取电影排片场次 (按影院分组)
  */
 export function getMovieSchedulesApi(movieId: number | string) {
-  return request({
+  return request<Array<{ cinema: Cinema; schedules: Schedule[] }>>({
     url: `/schedules/movie/${movieId}`,
     method: 'get'
   });
@@ -56,7 +58,7 @@ export function getMovieSchedulesApi(movieId: number | string) {
  * 切换电影收藏状态
  */
 export function toggleFavoriteApi(userId: number, movieId: number) {
-  return request({
+  return request<number[]>({
     url: '/favorites/toggle',
     method: 'post',
     data: { userId, movieId }
@@ -67,7 +69,7 @@ export function toggleFavoriteApi(userId: number, movieId: number) {
  * 获取用户收藏的电影ID列表
  */
 export function getUserFavoritesApi(userId: number) {
-  return request({
+  return request<number[]>({
     url: `/favorites/user/${userId}`,
     method: 'get'
   });
@@ -77,7 +79,7 @@ export function getUserFavoritesApi(userId: number) {
  * 获取电影排行榜 (按评分)
  */
 export function getMovieRankingApi() {
-  return request({
+  return request<Movie[]>({
     url: '/movies/ranking',
     method: 'get'
   });
@@ -87,7 +89,7 @@ export function getMovieRankingApi() {
  * 根据ID列表获取电影详情
  */
 export function getMoviesByIdsApi(ids: number[]) {
-  return request({
+  return request<Movie[]>({
     url: '/movies/list',
     method: 'post',
     data: ids

@@ -98,34 +98,24 @@ const onSubmit = () => {
     }
     submitting.value = true;
     try {
-      // 调用解耦后的 API 函数
-      const res: any = await loginApi({
+      const res = await loginApi({
         account: form.account,
         password: form.password
       });
 
-      // 验证后端返回逻辑
-      if (res && typeof res === 'object' && res.id) {
+      if (res && res.id) {
         ElMessage.success('登录成功');
         localStorage.setItem('token', 'TOKEN_' + res.id);
         
         userStore.setUserInfo({
-          id: res.id,
-          account: res.account,
-          nickname: res.nickname || res.account,
-          phone: res.phone || '',
-          bio: res.bio || '',
-          avatar: res.avatar || '',
+          ...res,
           token: 'TOKEN_' + res.id,
         });
         
         router.push('/home');
-      } else {
-        ElMessage.error(res || '账号或密码错误');
       }
     } catch (error) {
-      // 这里的错误会被 request.ts 的拦截器统一处理，ElMessage 已经弹出了
-      console.error('Login error details:', error);
+      console.error('Login error:', error);
     } finally {
       submitting.value = false;
     }
@@ -138,6 +128,7 @@ const goRegister = () => {
 </script>
 
 <style lang="scss" scoped>
+/* Styles remain unchanged */
 .login-page {
   min-height: 100vh;
   display: flex;
@@ -309,21 +300,5 @@ const goRegister = () => {
   color: #4b61f7;
   text-decoration: none;
   margin-left: 4px;
-}
-
-.login-agreement {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  font-size: 12px;
-  color: #6b7280;
-}
-
-.login-agreement input {
-  margin-top: 2px;
-}
-
-.login-agreement .login-link {
-  margin: 0 2px;
 }
 </style>

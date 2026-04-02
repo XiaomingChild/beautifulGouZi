@@ -20,8 +20,8 @@
               <span class="label">评分</span>
             </div>
             <div class="btn-group">
-              <button class="btn-action wish" :class="{ active: isWished }" @click="toggleWish">
-                <el-icon><Star /></el-icon> {{ isWished ? '已想看' : '想看' }}
+              <button class="btn-action wish" :class="{ active: isFavorited }" @click="handleToggleFavorite">
+                <el-icon><Star /></el-icon> {{ isFavorited ? '已想看' : '想看' }}
               </button>
               <button class="btn-action rate">
                 <el-icon><ChatDotRound /></el-icon> 评分
@@ -63,7 +63,6 @@
                   @click="goSeatSelection(sc)"
                 >
                   <div class="time">{{ formatTime(sc.startTime) }}</div>
-                  <div class="type">{{ sc.type }}</div>
                   <div class="hall">{{ sc.hallName }}</div>
                   <div class="price">￥{{ sc.price }}</div>
                   <button class="buy-btn">选座购票</button>
@@ -74,11 +73,11 @@
         </section>
       </div>
 
-      <!-- 右侧：侧边栏（预留，可放相关推荐等） -->
+      <!-- 右侧：侧边栏 -->
       <aside class="right-col">
         <div class="rank-block">
           <h3 class="side-title">相关推荐</h3>
-          <!-- 预留 -->
+          <p style="color: #94a3b8; font-size: 14px;">暂无相关推荐</p>
         </div>
       </aside>
     </div>
@@ -86,39 +85,42 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Star, ChatDotRound } from '@element-plus/icons-vue';
-import { getMovieDetailApi, getMovieSchedulesApi } from '../api/movie';
+import { getMovieDetailApi, getMovieSchedulesApi, toggleFavoriteApi } from '../api/movie';
 import { ElMessage } from 'element-plus';
+import { useUserStore } from '../store/userInfo';
+import type { Movie, Cinema, Schedule } from '../types';
 
 const route = useRoute();
 const router = useRouter();
-const movieId = route.params.id as string;
+const userStore = useUserStore();
+const movieId = Number(route.params.id);
 
-const movie = ref<any>(null);
-const cinemaSchedules = ref<any[]>([]);
-const isWished = ref(false);
+const movie = ref<Movie | null>(null);
+const cinemaSchedules = ref<Array<{ cinema: Cinema; schedules: Schedule[] }>>([]);
+
+const isFavorited = computed(() => {
+  return userStore.state.selected?.includes(movieId) || false;
+});
 
 const loadData = async () => {
   try {
-    // 1. 获取电影详情
-    const movieRes: any = await getMovieDetailApi(movieId);
-    if (movieRes) {
-      movie.value = movieRes;
-    }
+    const movieRes = await getMovieDetailApi(movieId);
+    movie.value = movieRes;
 
-    // 2. 获取排片信息
-    const scheduleRes: any = await getMovieSchedulesApi(movieId);
+    const scheduleRes = await getMovieSchedulesApi(movieId);
     cinemaSchedules.value = scheduleRes || [];
   } catch (error) {
     console.error('Failed to load movie details:', error);
-    ElMessage.error('加载失败');
   }
 };
 
-const formatTags = (tags: string) => {
-  return tags ? tags.split(',') : [];
+const formatTags = (tags: any) => {
+  if (!tags) return [];
+  if (Array.isArray(tags)) return tags;
+  return tags.split(',');
 };
 
 const formatDate = (dateStr: string) => {
@@ -132,13 +134,23 @@ const formatTime = (dateStr: string) => {
   return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
 };
 
-const toggleWish = () => {
-  isWished.value = !isWished.value;
-  ElMessage.success(isWished.value ? '已加入想看列表' : '已取消想看');
+const handleToggleFavorite = async () => {
+  if (!userStore.state.id) {
+    ElMessage.warning('请先登录');
+    router.push('/login');
+    return;
+  }
+
+  try {
+    const res = await toggleFavoriteApi(Number(userStore.state.id), movieId);
+    userStore.setUserInfo({ selected: res });
+    ElMessage.success(isFavorited.value ? '已加入收藏' : '已取消收藏');
+  } catch (error) {
+    console.error('Toggle favorite failed:', error);
+  }
 };
 
-const goSeatSelection = (schedule: any) => {
-  // 跳转到选座页，携带场次 ID
+const goSeatSelection = (schedule: Schedule) => {
   router.push({
     path: '/seatSelection',
     query: { scheduleId: schedule.id }
@@ -151,6 +163,7 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
+/* Styles remain the same, just keeping the important parts */
 .detail-page {
   background: #fdfdfd;
   min-height: 100vh;
@@ -193,7 +206,6 @@ onMounted(() => {
   .info-box {
     flex: 1;
     .title { font-size: 36px; font-weight: 800; margin-bottom: 8px; }
-    .en-name { font-size: 18px; opacity: 0.8; margin-bottom: 20px; }
     .meta-tags { display: flex; gap: 8px; margin-bottom: 12px;
       .type-tag { background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 4px; font-size: 13px; }
     }
@@ -279,7 +291,6 @@ onMounted(() => {
     &:hover { border-color: #15b8a6; background: #f0fdfa; transform: translateY(-2px); }
 
     .time { font-size: 20px; font-weight: 700; color: #111827; margin-bottom: 4px; }
-    .type { font-size: 12px; color: #6b7280; margin-bottom: 4px; }
     .hall { font-size: 12px; color: #9ca3af; margin-bottom: 8px; }
     .price { font-size: 16px; color: #ff4d4f; font-weight: 700; margin-bottom: 12px; }
     .buy-btn {

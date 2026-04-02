@@ -7,18 +7,27 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    CategoryTabs: typeof import('./components/home/CategoryTabs.vue')['default']
+    CinemaCard: typeof import('./components/cinema/CinemaCard.vue')['default']
+    CinemaFilter: typeof import('./components/cinema/CinemaFilter.vue')['default']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElCarousel: typeof import('element-plus/es')['ElCarousel']
     ElCarouselItem: typeof import('element-plus/es')['ElCarouselItem']
     ElCheckbox: typeof import('element-plus/es')['ElCheckbox']
+    ElEmpty: typeof import('element-plus/es')['ElEmpty']
     ElForm: typeof import('element-plus/es')['ElForm']
     ElFormItem: typeof import('element-plus/es')['ElFormItem']
+    ElIcon: typeof import('element-plus/es')['ElIcon']
     ElInput: typeof import('element-plus/es')['ElInput']
+    ElTooltip: typeof import('element-plus/es')['ElTooltip']
+    HeroCarousel: typeof import('./components/home/HeroCarousel.vue')['default']
     HomeNav: typeof import('./components/homeNav.vue')['default']
+    MovieCard: typeof import('./components/home/MovieCard.vue')['default']
+    RankingList: typeof import('./components/home/RankingList.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
   }
   export interface ComponentCustomProperties {
-    vInfiniteScroll: typeof import('element-plus/es')['ElInfiniteScroll']
+    vLoading: typeof import('element-plus/es')['ElLoadingDirective']
   }
 }

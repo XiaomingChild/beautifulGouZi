@@ -48,7 +48,7 @@
               <el-input v-model="profileData.bio" type="textarea" :rows="3" placeholder="介绍一下自己吧" />
             </div>
             <div class="form-actions">
-              <button class="btn-save" :loading="saving" @click="saveProfile">保存修改</button>
+              <button class="btn-save" :disabled="saving" @click="saveProfile">保存修改</button>
             </div>
           </div>
         </section>
@@ -128,6 +128,7 @@ import { userOrders } from '../../mock/data';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { updateUserInfoApi } from '../../api/user';
 import { getMoviesByIdsApi, toggleFavoriteApi } from '../../api/movie';
+import type { Movie } from '../../types';
 
 const route = useRoute();
 const router = useRouter();
@@ -137,7 +138,7 @@ const { state: user } = storeToRefs(userStore);
 const defaultAvatar = new URL('../../assets/avatar/avatar1.png', import.meta.url).href;
 const activeTab = ref('profile');
 const saving = ref(false);
-const favoriteMovies = ref<any[]>([]);
+const favoriteMovies = ref<Movie[]>([]);
 
 const menuItems = [
   { id: 'profile', label: '基本设置', icon: User },
@@ -161,7 +162,7 @@ const loadFavoriteMovies = async () => {
     return;
   }
   try {
-    const res: any = await getMoviesByIdsApi(user.value.selected);
+    const res = await getMoviesByIdsApi(user.value.selected);
     favoriteMovies.value = res || [];
   } catch (error) {
     console.error('Failed to load favorite movies:', error);
@@ -174,7 +175,7 @@ const goDetail = (id: number) => {
 
 const handleRemoveFavorite = async (movieId: number) => {
   try {
-    const res: any = await toggleFavoriteApi(Number(user.value.id), movieId);
+    const res = await toggleFavoriteApi(Number(user.value.id), movieId);
     // 同步到全局 Store
     userStore.setUserInfo({ selected: res || [] });
     // 本地列表即时过滤
@@ -205,22 +206,20 @@ const saveProfile = async () => {
   
   saving.value = true;
   try {
-    const res: any = await updateUserInfoApi({
+    const res = await updateUserInfoApi({
       id: user.value.id,
       nickname: profileData.nickname,
       phone: profileData.phone,
       bio: profileData.bio
     });
     
-    if (res && typeof res === 'object' && res.id) {
+    if (res && res.id) {
       userStore.setUserInfo({
         nickname: res.nickname,
         phone: res.phone,
         bio: res.bio
       });
       ElMessage.success('个人信息保存成功');
-    } else {
-      ElMessage.error(res || '保存失败');
     }
   } catch (error) {
     console.error('Update profile failed:', error);
@@ -258,6 +257,7 @@ watch(user, (newVal) => {
 </script>
 
 <style lang="scss" scoped>
+/* 保持原有样式不变 */
 .profile-page {
   background: #f7f8fb;
   min-height: calc(100vh - 68px);

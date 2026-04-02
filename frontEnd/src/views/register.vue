@@ -90,15 +90,15 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
-import type { FormInstance, FormRules } from 'element-plus'
-import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { registerApi } from '../api/user'
+import { reactive, ref } from 'vue';
+import type { FormInstance, FormRules } from 'element-plus';
+import { useRouter } from 'vue-router';
+import { ElMessage } from 'element-plus';
+import { registerApi } from '../api/user';
 
-const formRef = ref<FormInstance>()
-const submitting = ref(false)
-const router = useRouter()
+const formRef = ref<FormInstance>();
+const submitting = ref(false);
+const router = useRouter();
 
 const form = reactive({
   account: '',
@@ -107,7 +107,7 @@ const form = reactive({
   password: '',
   confirmPassword: '',
   agree: false,
-})
+});
 
 const rules: FormRules = {
   account: [{ required: true, message: '请输入账号', trigger: 'blur' }],
@@ -121,48 +121,49 @@ const rules: FormRules = {
     { required: true, message: '请再次输入密码', trigger: 'blur' },
     {
       validator: (_rule, value, callback) => {
-        if (value !== form.password) return callback(new Error('两次密码不一致'))
-        callback()
+        if (value !== form.password) {
+          callback(new Error('两次密码不一致'));
+        } else {
+          callback();
+        }
       },
       trigger: 'blur',
     },
   ],
-}
+};
 
 const onSubmit = () => {
-  if (!formRef.value) return
+  if (!formRef.value) return;
   formRef.value.validate(async (valid) => {
-    if (!valid) return
+    if (!valid) return;
     if (!form.agree) {
-      ElMessage.warning('请先勾选并同意协议')
-      return
+      ElMessage.warning('请先勾选并同意协议');
+      return;
     }
-    submitting.value = true
+    submitting.value = true;
     try {
-      const res: any = await registerApi({
+      const res = await registerApi({
         account: form.account,
         nickname: form.nickname,
         phone: form.phone,
         password: form.password
-      })
+      });
 
-      if (res && typeof res === 'object' && res.id) {
-        ElMessage.success('注册成功，请登录')
-        router.push('/login') // 跳转到登录页
-      } else {
-        ElMessage.error(res || '注册失败')
+      if (res && res.id) {
+        ElMessage.success('注册成功，请登录');
+        router.push('/login');
       }
     } catch (error) {
-      console.error('Register error:', error)
+      console.error('Register error:', error);
     } finally {
-      submitting.value = false
+      submitting.value = false;
     }
-  })
-}
+  });
+};
 
 const goLogin = () => {
-  router.push('/login')
-}
+  router.push('/login');
+};
 </script>
 
 <style lang="scss" scoped>
@@ -225,6 +226,9 @@ const goLogin = () => {
   border-radius: 8px;
   background: #4770fa;
   font-weight: 600;
+  color: #fff;
+  border: none;
+  cursor: pointer;
 }
 
 .login-footer {

@@ -26,48 +26,47 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { useUserStore } from '../../store/userInfo'
-import { ElMessage } from 'element-plus'
-import { Check, ArrowLeftBold } from '@element-plus/icons-vue'
-import { updateUserInfoApi } from '../../api/user'
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useUserStore } from '../../store/userInfo';
+import { ElMessage } from 'element-plus';
+import { Check, ArrowLeftBold } from '@element-plus/icons-vue';
+import { updateUserInfoApi } from '../../api/user';
 
-const router = useRouter()
-const userStore = useUserStore()
+const router = useRouter();
+const userStore = useUserStore();
 
 // 获取当前用户头像
-const currentAvatar = ref(userStore.state.avatar)
+const currentAvatar = ref(userStore.state.avatar);
 
 // 动态生成本地静态头像路径
 const getAvatarUrl = (i: number) => {
-  return new URL(`../../assets/avatar/avatar${i}.png`, import.meta.url).href
-}
+  return new URL(`../../assets/avatar/avatar${i}.png`, import.meta.url).href;
+};
 
 const selectAvatar = (i: number) => {
-  currentAvatar.value = getAvatarUrl(i)
-}
+  currentAvatar.value = getAvatarUrl(i);
+};
 
 const saveAvatar = async () => {
   try {
     // 1. 同步到本地 store
-    userStore.setUserInfo({ avatar: currentAvatar.value })
+    userStore.setUserInfo({ avatar: currentAvatar.value });
     
     // 2. 如果用户已登录，同步到后端
     if (userStore.state.id) {
       await updateUserInfoApi({ 
         id: userStore.state.id, 
         avatar: currentAvatar.value 
-      })
+      });
     }
     
-    ElMessage.success('头像修改成功')
-    router.back() // 修改成功后返回上一页（个人中心）
+    ElMessage.success('头像修改成功');
+    router.back(); // 修改成功后返回上一页（个人中心）
   } catch (error) {
-    console.error('Save avatar failed:', error)
-    ElMessage.error('头像保存失败')
+    console.error('Save avatar failed:', error);
   }
-}
+};
 </script>
 
 <style scoped lang="scss">

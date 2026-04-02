@@ -58,7 +58,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { storeToRefs } from 'pinia';
-import { useRouter } from 'vue-router';
+import { useRouter, RouterLink } from 'vue-router';
 import { ElMessageBox, ElMessage } from 'element-plus';
 import logoUrl from '../assets/logo.svg';
 import { usePosStore } from "../store/position";
@@ -127,6 +127,7 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped lang="scss">
+/* 保持原有样式不变 */
 .nav {
   background: #ffffff;
   border-bottom: 1px solid #f1f3f6;

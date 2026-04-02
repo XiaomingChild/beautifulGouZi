@@ -9,10 +9,8 @@
 </template>
 
 <script setup lang="ts">
-import { RouterView, useRoute } from 'vue-router'
-import HomeNav from './components/homeNav.vue'
-
-const route = useRoute()
+import { RouterView } from 'vue-router';
+import HomeNav from './components/homeNav.vue';
 </script>
 
 <style lang="scss">
