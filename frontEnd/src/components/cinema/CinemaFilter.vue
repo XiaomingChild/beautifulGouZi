@@ -23,8 +23,15 @@
         </div>
       </div>
       <div class="filter-row">
-        <span class="label">特殊厅：</span>
+        <span class="label">影厅类型：</span>
         <div class="options">
+          <span 
+            class="option" 
+            :class="{ active: activeHall === '全部' }"
+            @click="$emit('update:activeHall', '全部')"
+          >
+            全部
+          </span>
           <span 
             v-for="hall in specialHalls" 
             :key="hall" 

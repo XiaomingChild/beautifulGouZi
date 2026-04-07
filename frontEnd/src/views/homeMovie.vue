@@ -21,12 +21,15 @@
         <!-- 正在热映区块 -->
         <div class="sub-section">
           <div class="section-head">
-            <h2>正在热映</h2>
-            <span class="section-sub">影院热映精选</span>
+            <div class="head-left">
+              <h2>正在热映</h2>
+              <span class="section-sub">影院热映精选</span>
+            </div>
+            <router-link to="/movies?status=now" class="view-all">全部 &gt;</router-link>
           </div>
           <div class="cards" v-if="hotMovies.length > 0">
             <MovieCard 
-              v-for="movie in hotMovies" 
+              v-for="movie in hotMovies.slice(0, 10)" 
               :key="'hot-' + movie.id" 
               :movie="movie" 
               :is-favorited="isFavorited(movie.id)"
@@ -40,12 +43,15 @@
         <!-- 即将上映区块 -->
         <div class="sub-section">
           <div class="section-head">
-            <h2>即将上映</h2>
-            <span class="section-sub">提前锁定想看</span>
+            <div class="head-left">
+              <h2>即将上映</h2>
+              <span class="section-sub">提前锁定想看</span>
+            </div>
+            <router-link to="/movies?status=soon" class="view-all">全部 &gt;</router-link>
           </div>
           <div class="cards upcoming-cards" v-if="upcomingMovies.length > 0">
             <MovieCard 
-              v-for="movie in upcomingMovies" 
+              v-for="movie in upcomingMovies.slice(0, 10)" 
               :key="'soon-' + movie.id" 
               :movie="movie" 
               :is-favorited="isFavorited(movie.id)"
@@ -224,10 +230,27 @@ onMounted(() => {
 .section-head {
   display: flex;
   align-items: baseline;
-  gap: 12px;
+  justify-content: space-between;
   margin-bottom: 24px;
+  
+  .head-left {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+  
   h2 { font-size: 24px; font-weight: 700; color: #111827; margin: 0; }
   .section-sub { font-size: 14px; color: #6b7280; }
+  
+  .view-all {
+    font-size: 14px;
+    color: #15b8a6;
+    text-decoration: none;
+    font-weight: 500;
+    &:hover {
+      text-decoration: underline;
+    }
+  }
 }
 
 .sub-section { margin-bottom: 48px; }

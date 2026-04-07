@@ -24,9 +24,9 @@
           <button class="btn ghost" type="button" @click="goLogin">登录</button>
           <button class="btn solid" type="button" @click="goRegister">注册</button>
         </template>
-        <div v-else class="user-chip" ref="chipRef">
+        <div v-else class="user-chip" ref="chipRef"  @click.stop="toggleMenu">
           <img class="user-avatar" :src="user.avatar" alt="用户头像" @click.stop="goProfile('profile')" />
-          <span class="user-name" @click.stop="toggleMenu">{{ user.nickname || user.account }}</span>
+          <span class="user-name">{{ user.nickname || user.account }}</span>
           <svg class="caret" viewBox="0 0 24 24" aria-hidden="true" @click.stop="toggleMenu">
             <path d="M7 9l5 5 5-5H7z" fill="currentColor" />
           </svg>
