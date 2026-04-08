@@ -9,9 +9,9 @@
     </el-backtop>
 
     <main class="content-wrapper list-container">
-      <div class="cinema-list" v-if="mockCinemas.length > 0">
+      <div class="cinema-list" v-if="cinemas.length > 0">
         <CinemaCard 
-          v-for="cinema in mockCinemas" 
+          v-for="cinema in cinemas" 
           :key="cinema.id" 
           :cinema="cinema" 
           @go-detail="goCinemaDetail"
@@ -23,12 +23,33 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import CinemaCard from '../components/cinema/CinemaCard.vue';
-import { cinemas as mockCinemas } from '../mock/data';
+import { getAllCinemasApi } from '../api/cinema';
+import type { Cinema } from '../types';
+
+const router = useRouter();
+const cinemas = ref<Cinema[]>([]);
+
+const loadCinemas = async () => {
+  try {
+    const res = await getAllCinemasApi();
+    cinemas.value = res || [];
+  } catch (error) {
+    console.error('Failed to load cinemas:', error);
+  }
+};
 
 const goCinemaDetail = (id: number) => {
+  // 暂时影院详情页还没做，可以跳转到对应的影院详情
+  // 或者如果直接在购票流中，可以跳转到电影列表过滤该影院
   console.log('Go to cinema detail:', id);
 };
+
+onMounted(() => {
+  loadCinemas();
+});
 </script>
 
 <style lang="scss" scoped>

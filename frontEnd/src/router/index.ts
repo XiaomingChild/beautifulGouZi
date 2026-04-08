@@ -10,6 +10,7 @@ import ProfileView from '../views/profile/index.vue'
 import AvatarSelectView from '../views/profile/AvatarSelect.vue'
 import MoviesView from '../views/movies.vue'
 import CinemasView from '../views/cinemas.vue'
+import OrderSuccessView from '../views/orderSuccess.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -59,6 +60,12 @@ const router = createRouter({
       name: 'seatSelection',
       component: SeatSelectionView,
       meta: { title: '选座购票', requiresAuth: true },
+    },
+    {
+      path: '/orderSuccess',
+      name: 'orderSuccess',
+      component: OrderSuccessView,
+      meta: { title: '支付成功', requiresAuth: true },
     },
     {
       path: '/profile',

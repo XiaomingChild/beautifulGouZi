@@ -10,11 +10,11 @@ export const useUserStore = defineStore('user', () => {
     id: 0,
     account: '',
     nickname: '',
-    token: '',
-    avatar: defaultAvatar,
+    avatarUrl: defaultAvatar,
     phone: '',
     bio: '',
-    selected: [] // 收藏的电影ID列表
+    createdAt: '',
+    favoriteMovieIds: []
   });
 
   const hydrate = () => {
@@ -22,8 +22,10 @@ export const useUserStore = defineStore('user', () => {
     if (!saved) return;
     try {
       const data = JSON.parse(saved);
-      if (!data.avatar) data.avatar = defaultAvatar;
-      if (!data.selected) data.selected = [];
+      if (!data.avatarUrl && data.avatar) data.avatarUrl = data.avatar; // 兼容旧数据
+      if (!data.avatarUrl) data.avatarUrl = defaultAvatar;
+      if (!data.favoriteMovieIds && data.selected) data.favoriteMovieIds = data.selected; // 兼容旧数据
+      if (!data.favoriteMovieIds) data.favoriteMovieIds = [];
       Object.assign(state, data);
     } catch (e) {
       console.warn('userInfo hydrate failed', e);
@@ -44,15 +46,16 @@ export const useUserStore = defineStore('user', () => {
     state.id = 0;
     state.account = '';
     state.nickname = '';
-    state.token = '';
-    state.avatar = defaultAvatar;
+    state.avatarUrl = defaultAvatar;
     state.phone = '';
     state.bio = '';
-    state.selected = [];
+    state.createdAt = '';
+    state.favoriteMovieIds = [];
     localStorage.removeItem('userInfo');
+    localStorage.removeItem('token');
   };
 
-  const isAuthed = () => !!state.token;
+  const isAuthed = () => !!state.account;
 
   hydrate();
 

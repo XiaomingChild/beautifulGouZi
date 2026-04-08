@@ -1,14 +1,20 @@
 <template>
   <div class="profile-page">
     <div class="profile-container content-wrapper">
-      <!-- 左侧菜单 -->
+      <!-- 左侧菜单：资深级极简设计 -->
       <aside class="profile-sidebar">
         <div class="user-brief">
-          <div class="avatar-wrapper" @click="router.push('/avatar-select')">
-            <img :src="user.avatar || defaultAvatar" alt="用户头像" />
-            <div class="upload-mask">修改头像</div>
+          <div class="avatar-group" @click="router.push('/avatar-select')">
+            <div class="avatar-ring">
+              <img :src="user.avatarUrl || defaultAvatar" alt="用户头像" />
+            </div>
+            <div class="edit-badge">
+              <el-icon><CameraFilled /></el-icon>
+            </div>
           </div>
-          <h3 class="user-name">{{ user.nickname || user.account || '未登录' }}</h3>
+          <div class="user-meta">
+            <h3 class="user-name">{{ user.nickname || user.account }}</h3>
+          </div>
         </div>
         
         <nav class="side-menu">
@@ -16,8 +22,8 @@
             v-for="item in menuItems" 
             :key="item.id"
             class="menu-item"
-            :class="{ active: activeTab === item.id }"
-            @click="activeTab = item.id"
+            :class="{ active: activeTab === item.id, 'logout-btn': item.id === 'logout' }"
+            @click="handleMenuClick(item.id)"
           >
             <el-icon><component :is="item.icon" /></el-icon>
             <span>{{ item.label }}</span>
@@ -25,91 +31,138 @@
         </nav>
       </aside>
 
-      <!-- 右侧内容 -->
+      <!-- 右侧内容：大气简约风格 -->
       <main class="profile-content">
-        <!-- 个人详情 -->
-        <section v-if="activeTab === 'profile'" class="content-section">
-          <h2 class="section-head">基本设置</h2>
-          <div class="info-form">
-            <div class="form-item">
-              <label>用户账号</label>
-              <el-input v-model="user.account" disabled />
+        <!-- 基本设置：卡片式精致布局 -->
+        <section v-if="activeTab === 'profile'" class="settings-section">
+          <header class="section-header">
+            <div class="header-title">
+              <h2>个人资料</h2>
+              <p>管理您的账号基础信息与社交展示</p>
             </div>
-            <div class="form-item">
-              <label>用户昵称</label>
-              <el-input v-model="profileData.nickname" placeholder="请输入昵称" />
+          </header>
+
+          <div class="settings-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label>登录账号</label>
+                <div class="static-value">{{ user.account }}</div>
+                <p class="field-hint">账号为唯一识别码，不可修改</p>
+              </div>
             </div>
-            <div class="form-item">
-              <label>联系方式</label>
-              <el-input v-model="profileData.phone" placeholder="请输入手机号" />
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label>个人昵称</label>
+                <el-input 
+                  v-model="profileData.nickname" 
+                  placeholder="展示在影评与购票页的名称"
+                  class="custom-input"
+                />
+              </div>
+              <div class="form-group">
+                <label>联系电话</label>
+                <el-input 
+                  v-model="profileData.phone" 
+                  placeholder="用于接收购票成功短信"
+                  class="custom-input"
+                />
+              </div>
             </div>
-            <div class="form-item">
-              <label>个性签名</label>
-              <el-input v-model="profileData.bio" type="textarea" :rows="3" placeholder="介绍一下自己吧" />
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>个性签名</label>
+                <el-input 
+                  v-model="profileData.bio" 
+                  type="textarea" 
+                  :rows="4" 
+                  placeholder="用一句话介绍你自己..."
+                  class="custom-textarea"
+                />
+              </div>
             </div>
-            <div class="form-actions">
-              <button class="btn-save" :disabled="saving" @click="saveProfile">保存修改</button>
+
+            <div class="form-footer">
+              <button class="btn-submit" :class="{ loading: saving }" @click="saveProfile">
+                <span v-if="!saving">保存所有修改</span>
+                <el-icon v-else class="is-loading"><Loading /></el-icon>
+              </button>
             </div>
           </div>
         </section>
 
-        <!-- 我的订单 -->
-        <section v-if="activeTab === 'records'" class="content-section">
-          <h2 class="section-head">我的订单</h2>
+        <!-- 我的订单：列表流 -->
+        <section v-if="activeTab === 'records'" class="orders-section">
+          <header class="section-header">
+            <div class="header-title">
+              <h2>我的订单</h2>
+              <p>查看历史购票记录与取票凭证</p>
+            </div>
+          </header>
+          
           <div v-if="orderList.length === 0" class="empty-state">
-            <img src="https://p0.meituan.net/movie/60fd63e6e185f577f8841804f32650051234.png" alt="" />
-            <p>您还没有购票记录，去选一部电影吧</p>
+            <el-empty description="暂无购票记录" />
           </div>
-          <div v-else class="order-list">
-            <div v-for="order in orderList" :key="order.id" class="order-card">
-              <div class="order-header">
-                <span class="order-time">购票时间：{{ order.createTime }}</span>
-                <span class="order-id">订单号：{{ order.id }}</span>
-              </div>
-              <div class="order-body">
-                <div class="movie-info">
-                  <div class="detail">
-                    <h4 class="title">《{{ order.movieTitle }}》</h4>
-                    <p class="cinema">{{ order.cinemaName }}</p>
-                    <p class="hall-time">{{ order.hall }} | {{ order.showTime }}</p>
-                    <div class="seats">
-                      <span v-for="seat in order.seats" :key="seat" class="seat-tag">{{ seat }}</span>
-                    </div>
+          <div v-else class="order-flow">
+            <div v-for="order in orderList" :key="order.id" class="order-item-card">
+              <div class="order-main">
+                <div class="movie-poster" v-if="order.schedule?.movie">
+                  <img :src="order.schedule.movie.posterUrl" />
+                </div>
+                <div class="order-details">
+                  <div class="top-row">
+                    <h4 class="movie-name">《{{ order.schedule?.movie?.title }}》</h4>
+                    <span class="status-chip" :class="order.status === 1 ? 'paid' : 'pending'">
+                      {{ order.status === 1 ? '已支付' : '待支付' }}
+                    </span>
+                  </div>
+                  <p class="cinema-info">{{ order.schedule?.cinema?.name }} · {{ order.schedule?.hall?.name }}</p>
+                  <p class="time-info">{{ order.schedule?.showDate }} {{ order.schedule?.startTime?.substring(0,5) }}</p>
+                  <div class="seat-info">
+                    <span class="seat-tag" v-for="s in order.seatInfo.split(',')" :key="s">{{ s }}</span>
                   </div>
                 </div>
-                <div class="order-status">
-                  <div class="status-tag paid">已完成</div>
-                  <button class="btn-detail" @click="showTicketCode(order)">取票码</button>
+              </div>
+              <div class="order-actions">
+                <div class="price-info">
+                  <span class="currency">￥</span>
+                  <span class="amount">{{ order.totalPrice.toFixed(2) }}</span>
                 </div>
+                <button v-if="order.status === 1" class="btn-ticket" @click="showTicketCode(order)">
+                  <el-icon><Ticket /></el-icon> 取票码
+                </button>
               </div>
             </div>
           </div>
         </section>
 
-        <!-- 我的收藏 -->
-        <section v-if="activeTab === 'favorites'" class="content-section">
-          <h2 class="section-head">我的收藏</h2>
+        <!-- 我的想看：网格流 -->
+        <section v-if="activeTab === 'favorites'" class="fav-section">
+          <header class="section-header">
+            <div class="header-title">
+              <h2>我的想看</h2>
+              <p>您感兴趣并标记为收藏的精彩影片</p>
+            </div>
+          </header>
           <div v-if="favoriteMovies.length === 0" class="empty-state">
-            <img src="https://p0.meituan.net/movie/60fd63e6e185f577f8841804f32650051234.png" alt="" />
-            <p>您还没有收藏任何电影</p>
+            <el-empty description="暂时没有收藏的电影" />
           </div>
-          <div v-else class="favorite-grid">
+          <div class="fav-grid">
             <div 
               v-for="movie in favoriteMovies" 
               :key="movie.id" 
-              class="fav-card"
+              class="movie-fav-card"
               @click="goDetail(movie.id)"
             >
-              <div class="fav-poster-wrapper">
-                <img :src="movie.posterUrl" class="fav-poster" />
-                <div class="remove-btn" @click.stop="handleRemoveFavorite(movie.id)">
-                  <el-icon><Close /></el-icon>
+              <div class="poster-wrap">
+                <img :src="movie.posterUrl" />
+                <div class="rating-tag">{{ movie.rating }}</div>
+                <div class="remove-overlay" @click.stop="handleRemoveFavorite(movie.id)">
+                  <el-icon><Delete /></el-icon>
                 </div>
               </div>
-              <div class="fav-info">
-                <h4 class="fav-title">{{ movie.title }}</h4>
-                <p class="fav-meta">{{ movie.genre }} · {{ movie.rating }}分</p>
-              </div>
+              <h4 class="movie-title">{{ movie.title }}</h4>
             </div>
           </div>
         </section>
@@ -121,14 +174,17 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { User, Ticket, Star, Setting, Close } from '@element-plus/icons-vue';
+import { 
+  User, Ticket, Star, SwitchButton, 
+  CameraFilled, Loading, Delete 
+} from '@element-plus/icons-vue';
 import { storeToRefs } from 'pinia';
 import { useUserStore } from "../../store/userInfo";
-import { userOrders } from '../../mock/data';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { updateUserInfoApi } from '../../api/user';
 import { getMoviesByIdsApi, toggleFavoriteApi } from '../../api/movie';
-import type { Movie } from '../../types';
+import { getUserOrdersApi } from '../../api/order';
+import type { Movie, Order } from '../../types';
 
 const route = useRoute();
 const router = useRouter();
@@ -139,13 +195,31 @@ const defaultAvatar = new URL('../../assets/avatar/avatar1.png', import.meta.url
 const activeTab = ref('profile');
 const saving = ref(false);
 const favoriteMovies = ref<Movie[]>([]);
+const orderList = ref<Order[]>([]);
 
 const menuItems = [
   { id: 'profile', label: '基本设置', icon: User },
   { id: 'records', label: '我的订单', icon: Ticket },
-  { id: 'favorites', label: '我的收藏', icon: Star },
-  { id: 'security', label: '账号安全', icon: Setting },
+  { id: 'favorites', label: '我的想看', icon: Star },
+  { id: 'logout', label: '退出登录', icon: SwitchButton },
 ];
+
+const handleLogout = () => {
+  ElMessageBox.confirm('确定要退出当前账号吗？', '安全提示', {
+    confirmButtonText: '确定退出',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
+    userStore.resetUser();
+    ElMessage.success('已安全退出');
+    router.push('/login');
+  });
+};
+
+const handleMenuClick = (id: string) => {
+  if (id === 'logout') handleLogout();
+  else activeTab.value = id;
+};
 
 const profileData = reactive({
   nickname: user.value.nickname,
@@ -153,57 +227,59 @@ const profileData = reactive({
   bio: user.value.bio
 });
 
-const orderList = ref(userOrders);
+const loadOrders = async () => {
+  if (!user.value.id) return;
+  try {
+    const res = await getUserOrdersApi(Number(user.value.id));
+    orderList.value = res || [];
+  } catch (error) {
+    console.error('Order load failed:', error);
+  }
+};
 
-// 加载收藏的电影详情
 const loadFavoriteMovies = async () => {
-  if (!user.value.selected || user.value.selected.length === 0) {
+  if (!user.value.favoriteMovieIds?.length) {
     favoriteMovies.value = [];
     return;
   }
   try {
-    const res = await getMoviesByIdsApi(user.value.selected);
+    const res = await getMoviesByIdsApi(user.value.favoriteMovieIds);
     favoriteMovies.value = res || [];
   } catch (error) {
-    console.error('Failed to load favorite movies:', error);
+    console.error('Favorite load failed:', error);
   }
-};
-
-const goDetail = (id: number) => {
-  router.push(`/movieDetail/${id}`);
 };
 
 const handleRemoveFavorite = async (movieId: number) => {
   try {
     const res = await toggleFavoriteApi(Number(user.value.id), movieId);
-    // 同步到全局 Store
-    userStore.setUserInfo({ selected: res || [] });
-    // 本地列表即时过滤
+    userStore.setUserInfo({ favoriteMovieIds: res || [] });
     favoriteMovies.value = favoriteMovies.value.filter(m => m.id !== movieId);
-    ElMessage.success('已移出收藏');
+    ElMessage.success('已从想看列表移除');
   } catch (error) {
     ElMessage.error('操作失败');
   }
 };
 
-const showTicketCode = (order: any) => {
+const showTicketCode = (order: Order) => {
   ElMessageBox.alert(
-    `<div style="text-align:center;">
-      <p style="font-size:14px;color:#94a3b8;margin-bottom:10px;">出示取票码给自助取票机</p>
-      <h2 style="font-size:32px;letter-spacing:4px;color:#15b8a6;margin:20px 0;">8848 1234</h2>
-      <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=TICKET-${order.id}" style="width:150px;height:150px;" />
+    `<div class="ticket-dialog-content">
+      <div class="ticket-qr-wrap">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=TICKET-${order.ticketCode}" />
+      </div>
+      <div class="ticket-info-wrap">
+        <p class="ticket-label">唯一取票码</p>
+        <h2 class="ticket-code-text">${order.ticketCode}</h2>
+        <div class="ticket-warning">请在影院自助机扫描或输入此码</div>
+      </div>
     </div>`,
     '电影票电子码',
-    { dangerouslyUseHTMLString: true, confirmButtonText: '我知道了' }
+    { dangerouslyUseHTMLString: true, confirmButtonText: '完成' }
   );
 };
 
 const saveProfile = async () => {
-  if (!user.value.id) {
-    ElMessage.error('用户未登录');
-    return;
-  }
-  
+  if (!user.value.id) return;
   saving.value = true;
   try {
     const res = await updateUserInfoApi({
@@ -212,257 +288,226 @@ const saveProfile = async () => {
       phone: profileData.phone,
       bio: profileData.bio
     });
-    
-    if (res && res.id) {
-      userStore.setUserInfo({
-        nickname: res.nickname,
-        phone: res.phone,
-        bio: res.bio
-      });
-      ElMessage.success('个人信息保存成功');
-    }
+    userStore.setUserInfo(res);
+    ElMessage.success('资料已同步更新');
   } catch (error) {
-    console.error('Update profile failed:', error);
+    ElMessage.error('保存失败');
   } finally {
     saving.value = false;
   }
 };
 
+const goDetail = (id: number) => router.push(`/movieDetail/${id}`);
+
 onMounted(() => {
-  if (route.query.tab) {
-    activeTab.value = route.query.tab as string;
-  }
-  if (activeTab.value === 'favorites') {
-    loadFavoriteMovies();
-  }
+  if (route.query.tab) activeTab.value = route.query.tab as string;
+  if (activeTab.value === 'favorites') loadFavoriteMovies();
+  if (activeTab.value === 'records') loadOrders();
 });
 
-watch(activeTab, (newVal) => {
-  if (newVal === 'favorites') {
-    loadFavoriteMovies();
-  }
+watch(activeTab, (v) => {
+  if (v === 'favorites') loadFavoriteMovies();
+  if (v === 'records') loadOrders();
 });
 
-watch(() => user.value.selected, () => {
-  if (activeTab.value === 'favorites') {
-    loadFavoriteMovies();
-  }
+watch(() => user.value.favoriteMovieIds, () => {
+  if (activeTab.value === 'favorites') loadFavoriteMovies();
 }, { deep: true });
 
-watch(user, (newVal) => {
-  profileData.nickname = newVal.nickname;
-  profileData.phone = newVal.phone;
-  profileData.bio = newVal.bio;
+watch(user, (v) => {
+  profileData.nickname = v.nickname;
+  profileData.phone = v.phone;
+  profileData.bio = v.bio;
 }, { deep: true });
 </script>
 
 <style lang="scss" scoped>
-/* 保持原有样式不变 */
 .profile-page {
-  background: #f7f8fb;
+  background: #fcfcfd;
   min-height: calc(100vh - 68px);
-  padding: 40px 0;
+  padding: 60px 0;
 
   .content-wrapper {
-    max-width: 1500px;
+    max-width: 1280px;
     margin: 0 auto;
     display: grid;
-    grid-template-columns: 2fr 8fr;
-    gap: 30px;
-    padding: 0 16px;
+    grid-template-columns: 320px 1fr;
+    gap: 40px;
+    padding: 0 24px;
   }
 
+  /* 侧边栏样式 */
   .profile-sidebar {
     background: #fff;
-    border-radius: 16px;
-    overflow: hidden;
+    border-radius: 24px;
+    padding: 40px 20px;
     height: fit-content;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.02);
+    border: 1px solid #f1f5f9;
 
     .user-brief {
-      padding: 40px 20px;
       text-align: center;
-      background: linear-gradient(to bottom, #f0f9f8, #ffffff);
-      border-bottom: 1px solid #f1f3f6;
+      margin-bottom: 40px;
 
-      .avatar-wrapper {
-        width: 100px; height: 100px; margin: 0 auto 16px;
-        position: relative; border-radius: 50%; overflow: hidden;
-        border: 4px solid #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      .avatar-group {
+        position: relative;
+        width: 120px;
+        height: 120px;
+        margin: 0 auto 20px;
         cursor: pointer;
-        img { width: 100%; height: 100%; object-fit: cover; }
-        .upload-mask {
-          position: absolute; inset: 0; background: rgba(0,0,0,0.4);
-          color: #fff; font-size: 12px; display: flex; align-items: center;
-          justify-content: center; opacity: 0; transition: opacity 0.3s;
+
+        .avatar-ring {
+          width: 100%; height: 100%; border-radius: 50%; padding: 4px;
+          border: 2px solid #f1f5f9; overflow: hidden;
+          img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
         }
-        &:hover .upload-mask { opacity: 1; }
+
+        .edit-badge {
+          position: absolute; bottom: 4px; right: 4px;
+          background: #15b8a6; color: #fff; width: 32px; height: 32px;
+          border-radius: 50%; display: flex; align-items: center; justify-content: center;
+          box-shadow: 0 4px 10px rgba(21, 184, 166, 0.3);
+          border: 3px solid #fff;
+        }
+
+        &:hover .avatar-ring { border-color: #15b8a6; }
       }
-      .user-name { font-size: 18px; font-weight: 700; color: #1f2937; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+      .user-name { font-size: 20px; font-weight: 800; color: #1e293b; margin-bottom: 4px; }
+      .user-id { font-size: 13px; color: #94a3b8; }
     }
 
     .side-menu {
-      padding: 10px;
       .menu-item {
-        width: 100%; height: 50px; border: none; background: transparent;
-        display: flex; align-items: center; gap: 12px; padding: 0 20px;
-        border-radius: 10px; cursor: pointer; color: #4b5563; font-weight: 600;
-        transition: all 0.2s;
-        margin-bottom: 4px;
+        width: 100%; height: 52px; border: none; background: transparent;
+        display: flex; align-items: center; gap: 14px; padding: 0 24px;
+        border-radius: 14px; cursor: pointer; color: #64748b; font-weight: 600;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        margin-bottom: 8px;
 
-        .el-icon { font-size: 18px; }
-        &:hover { background: #f3f4f6; color: #15b8a6; }
-        &.active { background: #15b8a6; color: #fff; box-shadow: 0 4px 12px rgba(21, 184, 166, 0.2); }
+        .el-icon { font-size: 20px; }
+        &:hover { background: #f8fafc; color: #15b8a6; }
+        &.active { background: #15b8a6; color: #fff; box-shadow: 0 10px 20px rgba(21, 184, 166, 0.2); }
+        
+        &.logout-btn {
+          margin-top: 40px; color: #f43f5e;
+          &:hover { background: #fff1f2; }
+        }
       }
     }
   }
 
+  /* 主体内容样式 */
   .profile-content {
     background: #fff;
-    border-radius: 16px;
-    padding: 30px;
-    min-height: 600px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+    border-radius: 24px;
+    padding: 40px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.02);
+    border: 1px solid #f1f5f9;
 
-    .section-head {
-      font-size: 20px; font-weight: 700; color: #1f2937;
-      margin-bottom: 30px; padding-bottom: 16px; border-bottom: 1px solid #f1f3f6;
-    }
-
-    .info-form {
-      max-width: 800px;
-      .form-item {
-        margin-bottom: 24px;
-        label { display: block; font-size: 14px; color: #6b7280; margin-bottom: 8px; font-weight: 600; }
-      }
-      .form-actions {
-        margin-top: 40px;
-        .btn-save {
-          background: #15b8a6; color: #fff; border: none; padding: 12px 30px;
-          border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s;
-          &:hover { opacity: 0.9; transform: translateY(-1px); }
-        }
+    .section-header {
+      margin-bottom: 40px;
+      .header-title {
+        h2 { font-size: 24px; font-weight: 800; color: #1e293b; margin-bottom: 8px; }
+        p { font-size: 14px; color: #94a3b8; }
       }
     }
 
-    .order-list {
-      display: grid; gap: 20px;
-      .order-card {
-        border: 1px solid #f1f3f6; border-radius: 12px; overflow: hidden;
-        transition: all 0.3s;
-        &:hover { border-color: #15b8a6; box-shadow: 0 8px 24px rgba(21, 184, 166, 0.08); }
-        
-        .order-header {
-          background: #f9fafb; padding: 12px 20px; font-size: 12px; color: #9ca3af;
-          display: flex; justify-content: space-between;
-        }
-        .order-body {
-          padding: 20px; display: flex; justify-content: space-between; align-items: center;
-          
-          .movie-info {
-            display: flex; gap: 16px;
-            .detail {
-              .title { font-size: 16px; font-weight: 700; margin-bottom: 6px; color: #1f2937; }
-              .cinema { font-size: 13px; color: #4b5563; margin-bottom: 4px; }
-              .hall-time { font-size: 12px; color: #9ca3af; margin-bottom: 8px; }
-              .seats { display: flex; gap: 6px;
-                .seat-tag { background: #f3f4f6; color: #6b7280; font-size: 11px; padding: 2px 6px; border-radius: 4px; }
-              }
-            }
-          }
-
-          .order-status {
-            text-align: right;
-            .status-tag { font-size: 13px; font-weight: 700; margin-bottom: 12px;
-              &.paid { color: #15b8a6; }
-            }
-            .btn-detail {
-              background: #fff; border: 1px solid #15b8a6; color: #15b8a6;
-              padding: 6px 16px; border-radius: 6px; cursor: pointer; font-size: 13px;
-              transition: all 0.2s;
-              &:hover { background: #15b8a6; color: #fff; }
-            }
-          }
-        }
+    /* 基本设置表单 */
+    .settings-form {
+      .form-grid {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px;
       }
-    }
-
-    .favorite-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-      gap: 24px;
+      .form-row { margin-bottom: 30px; }
       
-      .fav-card {
-        cursor: pointer;
-        transition: all 0.3s;
-        
-        .fav-poster-wrapper {
-          position: relative;
-          width: 100%;
-          aspect-ratio: 2/3;
-          margin-bottom: 12px;
-          border-radius: 12px;
-          overflow: hidden;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      .form-group {
+        label { display: block; font-size: 14px; font-weight: 700; color: #475569; margin-bottom: 12px; }
+        .static-value { font-size: 16px; color: #1e293b; font-weight: 600; padding: 12px 0; }
+        .field-hint { font-size: 12px; color: #cbd5e1; margin-top: 8px; }
+      }
 
-          .fav-poster {
-            width: 100%; height: 100%; object-fit: cover;
-            transition: transform 0.5s;
-          }
-
-          .remove-btn {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            width: 28px;
-            height: 28px;
-            background: rgba(0,0,0,0.5);
-            backdrop-filter: blur(4px);
-            color: #fff;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            transform: scale(0.8);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 2;
-
-            &:hover {
-              background: #ef4444;
-              transform: scale(1.1) !important;
-            }
-          }
-        }
-
-        &:hover {
-          transform: translateY(-5px);
-          .fav-poster { transform: scale(1.05); }
-          .remove-btn { opacity: 1; transform: scale(1); }
-        }
-        
-        .fav-title {
-          font-size: 15px;
-          font-weight: 700;
-          color: #1f2937;
-          margin-bottom: 4px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        
-        .fav-meta {
-          font-size: 12px;
-          color: #9ca3af;
-        }
+      .btn-submit {
+        background: #1e293b; color: #fff; border: none; padding: 16px 40px;
+        border-radius: 12px; font-weight: 700; cursor: pointer; transition: all 0.3s;
+        margin-top: 20px;
+        &:hover { background: #0f172a; transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        &.loading { opacity: 0.7; cursor: wait; }
       }
     }
 
-    .empty-state {
-      text-align: center; padding: 60px 0;
-      img { width: 120px; opacity: 0.5; margin-bottom: 20px; }
-      p { color: #9ca3af; font-size: 14px; }
+    /* 订单样式 */
+    .order-item-card {
+      border: 1px solid #f1f5f9; border-radius: 20px; margin-bottom: 24px;
+      display: flex; justify-content: space-between; padding: 24px;
+      transition: all 0.3s;
+      &:hover { border-color: #15b8a6; background: #fafdfd; }
+
+      .order-main {
+        display: flex; gap: 20px;
+        .movie-poster { width: 80px; height: 110px; border-radius: 10px; overflow: hidden;
+          img { width: 100%; height: 100%; object-fit: cover; }
+        }
+        .order-details {
+          .top-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px;
+            .movie-name { font-size: 18px; font-weight: 800; color: #1e293b; }
+            .status-chip { font-size: 11px; padding: 2px 10px; border-radius: 20px; font-weight: 700;
+              &.paid { background: #ccfbf1; color: #0f766e; }
+              &.pending { background: #fef3c7; color: #b45309; }
+            }
+          }
+          .cinema-info { font-size: 14px; color: #64748b; margin-bottom: 4px; }
+          .time-info { font-size: 13px; color: #94a3b8; margin-bottom: 10px; }
+          .seat-info { display: flex; gap: 8px; .seat-tag { background: #f1f5f9; color: #475569; padding: 2px 8px; border-radius: 6px; font-size: 11px; } }
+        }
+      }
+
+      .order-actions {
+        display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between;
+        .price-info { .currency { font-size: 12px; color: #f43f5e; font-weight: 700; } .amount { font-size: 24px; color: #f43f5e; font-weight: 800; } }
+        .btn-ticket { background: #fff; border: 1.5px solid #15b8a6; color: #15b8a6; padding: 8px 20px; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s; &:hover { background: #15b8a6; color: #fff; } }
+      }
+    }
+
+    /* 想看网格 */
+    .fav-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 30px;
+      .movie-fav-card {
+        cursor: pointer;
+        .poster-wrap {
+          position: relative; border-radius: 16px; overflow: hidden; aspect-ratio: 2/3; box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+          img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s; }
+          .rating-tag { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); color: #fbbf24; padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 800; backdrop-filter: blur(4px); }
+          .remove-overlay { position: absolute; inset: 0; background: rgba(244, 63, 94, 0.8); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 32px; opacity: 0; transition: opacity 0.3s; backdrop-filter: blur(4px); }
+          &:hover .remove-overlay { opacity: 1; }
+          &:hover img { transform: scale(1.1); }
+        }
+        .movie-title { margin-top: 14px; font-size: 15px; font-weight: 700; color: #1e293b; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      }
     }
   }
+}
+</style>
+
+<style lang="scss">
+/* 全局覆盖弹窗样式 */
+.ticket-dialog-content {
+  text-align: center; padding: 20px 0;
+  .ticket-qr-wrap { background: #f8fafc; padding: 20px; border-radius: 20px; display: inline-block; margin-bottom: 24px; img { width: 180px; height: 180px; } }
+  .ticket-info-wrap {
+    .ticket-label { font-size: 13px; color: #94a3b8; margin-bottom: 8px; }
+    .ticket-code-text { font-size: 36px; color: #15b8a6; letter-spacing: 6px; font-weight: 900; margin-bottom: 12px; }
+    .ticket-warning { font-size: 12px; color: #f43f5e; background: #fff1f2; padding: 4px 12px; border-radius: 20px; display: inline-block; }
+  }
+}
+
+/* 覆盖Element Plus 输入框 */
+.custom-input .el-input__wrapper, .custom-textarea .el-textarea__inner {
+  background-color: #f8fafc !important;
+  box-shadow: none !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  padding: 12px 16px !important;
+  &:hover { border-color: #cbd5e1 !important; }
+  &.is-focus { border-color: #15b8a6 !important; background-color: #fff !important; }
 }
 </style>

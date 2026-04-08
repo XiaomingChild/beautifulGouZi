@@ -25,9 +25,9 @@
           <button class="btn solid" type="button" @click="goRegister">注册</button>
         </template>
         <div v-else class="user-chip" ref="chipRef"  @click.stop="toggleMenu">
-          <img class="user-avatar" :src="user.avatar" alt="用户头像" @click.stop="goProfile('profile')" />
+          <img class="user-avatar" :src="user.avatarUrl" alt="用户头像" @click.stop="goProfile('profile')" />
           <span class="user-name">{{ user.nickname || user.account }}</span>
-          <svg class="caret" viewBox="0 0 24 24" aria-hidden="true" @click.stop="toggleMenu">
+          <svg class="caret" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M7 9l5 5 5-5H7z" fill="currentColor" />
           </svg>
           <div v-show="menuOpen" class="dropdown">
@@ -38,6 +38,7 @@
               class="dropdown-item"
               @click.stop="goProfile(item.tab)"
             >
+              <el-icon><component :is="item.icon" /></el-icon>
               <span class="dropdown-text">{{ item.label }}</span>
             </button>
             <hr class="dropdown-divider" />
@@ -46,6 +47,7 @@
               class="dropdown-item logout-item"
               @click.stop="handleLogout"
             >
+              <el-icon><SwitchButton /></el-icon>
               <span class="dropdown-text">退出登录</span>
             </button>
           </div>
@@ -60,6 +62,7 @@ import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useRouter, RouterLink } from 'vue-router';
 import { ElMessageBox, ElMessage } from 'element-plus';
+import { User, Ticket, Star, SwitchButton } from '@element-plus/icons-vue';
 import logoUrl from '../assets/logo.svg';
 import { usePosStore } from "../store/position";
 import { useUserStore } from "../store/userInfo";
@@ -73,10 +76,9 @@ const router = useRouter();
 const menuOpen = ref(false);
 const chipRef = ref<HTMLElement | null>(null);
 const menuItems = [
-  { tab: 'profile', label: '基本设置' },
-  { tab: 'records', label: '我的订单' },
-  { tab: 'favorites', label: '我的收藏' },
-  { tab: 'security', label: '账号安全' },
+  { tab: 'profile', label: '基本设置', icon: User },
+  { tab: 'records', label: '我的订单', icon: Ticket },
+  { tab: 'favorites', label: '我的收藏', icon: Star },
 ];
 
 const goHome = () => router.push('/home');
@@ -127,7 +129,6 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped lang="scss">
-/* 保持原有样式不变 */
 .nav {
   background: #ffffff;
   border-bottom: 1px solid #f1f3f6;

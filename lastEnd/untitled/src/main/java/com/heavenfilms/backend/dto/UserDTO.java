@@ -9,11 +9,11 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserDTO {
-    private Integer id;
+    private Long id;
     private String account;
     private String nickname;
     private String phone;
-    private String avatar;
+    private String avatarUrl;
     private String bio;
-    private List<Integer> selected;
+    private List<Long> favoriteMovieIds;
 }

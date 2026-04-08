@@ -1,44 +1,41 @@
 package com.heavenfilms.backend.service.impl;
 
-import com.heavenfilms.backend.entity.User;
-import com.heavenfilms.backend.exception.ServiceException;
-import com.heavenfilms.backend.repository.UserRepository;
+import com.heavenfilms.backend.entity.Favorite;
+import com.heavenfilms.backend.repository.FavoriteRepository;
 import com.heavenfilms.backend.service.FavoriteService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class FavoriteServiceImpl implements FavoriteService {
 
     @Autowired
-    private UserRepository userRepository;
+    private FavoriteRepository favoriteRepository;
 
     @Override
-    public List<Integer> toggle(Integer userId, Integer movieId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ServiceException("用户不存在"));
-        
-        if (user.getSelected() == null) {
-            user.setSelected(new ArrayList<>());
-        }
-        
-        List<Integer> list = user.getSelected();
-        if (list.contains(movieId)) {
-            list.remove(movieId);
+    @Transactional
+    public List<Long> toggle(Long userId, Long movieId) {
+        Optional<Favorite> favoriteOpt = favoriteRepository.findByUserIdAndMovieId(userId, movieId);
+        if (favoriteOpt.isPresent()) {
+            favoriteRepository.delete(favoriteOpt.get());
         } else {
-            list.add(movieId);
+            Favorite favorite = new Favorite();
+            favorite.setUserId(userId);
+            favorite.setMovieId(movieId);
+            favoriteRepository.save(favorite);
         }
-        userRepository.save(user);
-        return list;
+        return getUserFavoriteMovieIds(userId);
     }
 
     @Override
-    public List<Integer> getUserFavoriteMovieIds(Integer userId) {
-        return userRepository.findById(userId)
-                .map(u -> u.getSelected() != null ? u.getSelected() : new ArrayList<Integer>())
-                .orElse(new ArrayList<>());
+    public List<Long> getUserFavoriteMovieIds(Long userId) {
+        return favoriteRepository.findByUserId(userId).stream()
+                .map(Favorite::getMovieId)
+                .collect(Collectors.toList());
     }
 }

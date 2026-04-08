@@ -2,6 +2,8 @@ package com.heavenfilms.backend.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import java.math.BigDecimal;
+import java.sql.Time;
 import java.util.Date;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
@@ -11,26 +13,46 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 public class Schedule {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private Long id;
 
-    @Column(name = "movie_id")
-    private Integer movieId;
+    @Column(name = "movie_id", nullable = false)
+    private Long movieId;
 
-    @Column(name = "cinema_id")
-    private Integer cinemaId;
+    @Column(name = "cinema_id", nullable = false)
+    private Long cinemaId;
 
-    @Column(name = "hall_name")
-    private String hallName;
+    @Column(name = "hall_id", nullable = false)
+    private Long hallId;
 
-    @Column(name = "start_time")
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
-    private Date startTime;
+    @Column(name = "show_date", nullable = false)
+    @Temporal(TemporalType.DATE)
+    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "GMT+8")
+    private Date showDate;
 
-    private String type; // 如 "英语 3D", "国语 2D"
-    private Double price;
-    
-    // 选填：为了方便前端，我们可以建立关联关系，或者在查询时手动处理
+    @Column(name = "start_time", nullable = false)
+    @JsonFormat(pattern = "HH:mm", timezone = "GMT+8")
+    private Time startTime;
+
+    @Column(name = "end_time", nullable = false)
+    @JsonFormat(pattern = "HH:mm", timezone = "GMT+8")
+    private Time endTime;
+
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal price;
+
+    @Column(name = "language_version")
+    private String languageVersion;
+
+    // 关联关系映射
+    @ManyToOne
+    @JoinColumn(name = "movie_id", insertable = false, updatable = false)
+    private Movie movie;
+
     @ManyToOne
     @JoinColumn(name = "cinema_id", insertable = false, updatable = false)
     private Cinema cinema;
+
+    @ManyToOne
+    @JoinColumn(name = "hall_id", insertable = false, updatable = false)
+    private Hall hall;
 }

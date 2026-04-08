@@ -3,6 +3,6 @@ package com.heavenfilms.backend.service;
 import java.util.List;
 
 public interface FavoriteService {
-    List<Integer> toggle(Integer userId, Integer movieId);
-    List<Integer> getUserFavoriteMovieIds(Integer userId);
+    List<Long> toggle(Long userId, Long movieId);
+    List<Long> getUserFavoriteMovieIds(Long userId);
 }

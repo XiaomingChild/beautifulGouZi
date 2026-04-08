@@ -37,7 +37,7 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public Result<UserDTO> getUserInfo(@PathVariable Integer id) {
+    public Result<UserDTO> getUserInfo(@PathVariable Long id) {
         UserDTO userDTO = userService.findById(id);
         return Result.success(userDTO);
     }

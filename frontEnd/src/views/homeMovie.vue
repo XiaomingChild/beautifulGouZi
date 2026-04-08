@@ -122,10 +122,10 @@ const activeCategory = ref(categories[0].value);
 const loadInitialData = async () => {
   loading.value = true;
   try {
-    // 并行获取初始数据
+    // 并行获取初始数据：严格请求 8 部电影实现双行展示
     const [hotRes, soonRes, rankRes] = await Promise.all([
-      getHotMoviesApi(),
-      getUpcomingMoviesApi(),
+      getHotMoviesApi('all', 0, 8), 
+      getUpcomingMoviesApi('all', 0, 8),
       getMovieRankingApi()
     ]);
 
@@ -142,7 +142,7 @@ const loadInitialData = async () => {
     if (userStore.state.id) {
       const favRes = await getUserFavoritesApi(Number(userStore.state.id));
       favoriteIds.value = favRes || [];
-      userStore.setUserInfo({ selected: favoriteIds.value });
+      userStore.setUserInfo({ favoriteMovieIds: favoriteIds.value });
     }
   } catch (error) {
     console.error('Failed to load initial data:', error);
@@ -158,15 +158,15 @@ const handleCategoryChange = async (value: string) => {
     if (value === 'all') {
       await loadInitialData();
     } else if (value === 'now_playing') {
-      const res = await getHotMoviesApi();
+      const res = await getHotMoviesApi('all', 0, 8);
       hotMovies.value = res?.content || [];
       upcomingMovies.value = [];
     } else if (value === 'coming_soon') {
-      const res = await getUpcomingMoviesApi();
+      const res = await getUpcomingMoviesApi('all', 0, 8);
       upcomingMovies.value = res?.content || [];
       hotMovies.value = [];
     } else {
-      const res = await getMoviesByCategoryApi(value);
+      const res = await getMoviesByCategoryApi(value, 0, 8);
       hotMovies.value = res?.content || [];
       upcomingMovies.value = [];
     }
@@ -187,9 +187,9 @@ const handleToggleFavorite = async (movieId: number) => {
   try {
     const res = await toggleFavoriteApi(Number(userStore.state.id), movieId);
     favoriteIds.value = res || [];
-    userStore.setUserInfo({ selected: favoriteIds.value });
+    userStore.setUserInfo({ favoriteMovieIds: favoriteIds.value });
     
-    ElMessage.success(favoriteIds.value.includes(movieId) ? '已加入收藏' : '已取消收藏');
+    ElMessage.success(favoriteIds.value.includes(movieId) ? '已加入想看' : '已移出想看');
   } catch (error) {
     console.error('Toggle favorite failed:', error);
   }

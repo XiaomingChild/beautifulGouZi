@@ -10,12 +10,12 @@
           <div class="screen-light"></div>
         </div>
 
-        <div class="seat-grid">
-          <div v-for="row in 8" :key="row" class="seat-row">
+        <div class="seat-grid" v-if="schedule && schedule.hall">
+          <div v-for="row in schedule.hall.rowCount" :key="row" class="seat-row">
             <span class="row-index">{{ row }}</span>
             <div class="row-seats">
               <div
-                v-for="col in 10"
+                v-for="col in schedule.hall.colCount"
                 :key="col"
                 class="seat-item"
                 :class="getSeatStatus(row, col)"
@@ -59,11 +59,11 @@
           </div>
           <div class="info-row">
             <span class="label">影厅：</span>
-            <span class="value">{{ schedule.hallName }}</span>
+            <span class="value">{{ schedule.hall?.name || '加载中...' }}</span>
           </div>
           <div class="info-row">
             <span class="label">场次：</span>
-            <span class="value accent">{{ formatTime(schedule.startTime) }}</span>
+            <span class="value accent">{{ schedule.showDate }} {{ schedule.startTime }}</span>
           </div>
         </div>
 
@@ -98,18 +98,18 @@ import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { getMovieDetailApi } from '../api/movie';
 import { getScheduleDetailApi } from '../api/schedule';
-import { createOrderApi, getSoldSeatsApi } from '../api/order';
+import { createOrderApi, getBookedSeatsApi, payOrderApi } from '../api/order';
 import { useUserStore } from '../store/userInfo';
-import type { Movie, Schedule } from '../types';
+import type { Movie, Schedule, BookedSeat } from '../types';
 
 const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();
 const scheduleId = Number(route.query.scheduleId);
+const cinemaName = ref(route.query.cinemaName as string || '加载中...');
 
 const movie = ref<Movie | null>(null);
 const schedule = ref<Schedule | null>(null);
-const cinemaName = ref('加载中...');
 const soldSeats = ref<string[]>([]);
 
 interface SelectedSeat {
@@ -136,8 +136,8 @@ const toggleSeat = (row: number, col: number) => {
   if (index > -1) {
     selectedSeats.value.splice(index, 1);
   } else {
-    if (selectedSeats.value.length >= 5) {
-      ElMessage.warning('每个订单最多购买5张票');
+    if (selectedSeats.value.length >= 6) {
+      ElMessage.warning('每个订单最多购买6张票');
       return;
     }
     selectedSeats.value.push({ id, row, col });
@@ -149,18 +149,6 @@ const totalPrice = computed(() => {
   return selectedSeats.value.length * schedule.value.price;
 });
 
-const formatTime = (dateStr: string) => {
-  if (!dateStr) return '';
-  const date = new Date(dateStr);
-  return date.toLocaleString('zh-CN', { 
-    month: '2-digit', 
-    day: '2-digit', 
-    hour: '2-digit', 
-    minute: '2-digit', 
-    hour12: false 
-  });
-};
-
 const loadData = async () => {
   try {
     const scRes = await getScheduleDetailApi(scheduleId);
@@ -170,16 +158,19 @@ const loadData = async () => {
       const movieRes = await getMovieDetailApi(schedule.value.movieId);
       movie.value = movieRes;
       
-      // 这里应该根据 cinemaId 获取影院名称，但为了简化先硬编码或从之前的页面带过来
-      cinemaName.value = '万达影城'; 
+      // 如果后端没有直接返回影院名称，则使用路由传参
+      if (schedule.value.cinema?.name) {
+        cinemaName.value = schedule.value.cinema.name;
+      }
       
-      const soldRes = await getSoldSeatsApi(scheduleId);
-      soldSeats.value = soldRes || [];
+      const bookedRes = await getBookedSeatsApi(scheduleId);
+      soldSeats.value = bookedRes.map(s => `${s.rowIndex}-${s.colIndex}`);
     }
   } catch (error) {
     console.error('Failed to load seat selection data:', error);
   }
 };
+
 
 const handleConfirm = () => {
   if (!userStore.state.id) {
@@ -189,25 +180,34 @@ const handleConfirm = () => {
   }
 
   ElMessageBox.confirm(
-    `确认购买这 ${selectedSeats.value.length} 张票吗？共计 ￥${totalPrice.value.toFixed(2)}`,
-    '确认购票',
-    { confirmButtonText: '立即支付', cancelButtonText: '再选选' }
+    `确认选定这 ${selectedSeats.value.length} 个座位吗？请在15分钟内完成支付。`,
+    '确认订单',
+    { confirmButtonText: '去支付', cancelButtonText: '再看看' }
   ).then(async () => {
     try {
-      const seatStr = selectedSeats.value.map(s => `${s.row}-${s.col}`).join(',');
-      await createOrderApi({
+      // 1. 创建订单 (锁定座位)
+      const seatStr = selectedSeats.value.map(s => `${s.row}排${s.col}座`).join(',');
+      const res = await createOrderApi({
         userId: userStore.state.id,
         scheduleId: scheduleId,
-        seats: seatStr,
+        seatInfo: seatStr,
         totalPrice: totalPrice.value
       });
       
-      ElMessage.success('支付成功！正在为您生成取票码...');
-      setTimeout(() => {
-        router.push('/home');
-      }, 1500);
-    } catch (error) {
-      console.error('Create order failed:', error);
+      // 2. 模拟支付流程
+      if (res.orderNo) {
+        await payOrderApi(res.orderNo);
+        ElMessage.success('支付成功！已为您生成取票码');
+        
+        setTimeout(() => {
+          router.push({
+            path: '/orderSuccess',
+            query: { orderNo: res.orderNo }
+          });
+        }, 1500);
+      }
+    } catch (error: any) {
+      ElMessage.error(error.message || '下单失败');
     }
   });
 };

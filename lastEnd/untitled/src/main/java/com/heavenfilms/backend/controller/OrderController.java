@@ -1,6 +1,7 @@
 package com.heavenfilms.backend.controller;
 
 import com.heavenfilms.backend.common.Result;
+import com.heavenfilms.backend.entity.BookedSeat;
 import com.heavenfilms.backend.entity.Order;
 import com.heavenfilms.backend.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,15 +23,24 @@ public class OrderController {
         return Result.success(savedOrder);
     }
 
-    @GetMapping("/sold-seats/{scheduleId}")
-    public Result<List<String>> getSoldSeats(@PathVariable Integer scheduleId) {
-        List<String> soldSeats = orderService.getSoldSeats(scheduleId);
-        return Result.success(soldSeats);
+    @PostMapping("/pay/{orderNo}")
+    public Result<String> payOrder(@PathVariable String orderNo) {
+        orderService.payOrder(orderNo);
+        return Result.success("支付成功");
+    }
+
+    @GetMapping("/booked-seats/{scheduleId}")
+    public Result<List<BookedSeat>> getBookedSeats(@PathVariable Long scheduleId) {
+        return Result.success(orderService.getBookedSeats(scheduleId));
     }
 
     @GetMapping("/user/{userId}")
-    public Result<List<Order>> getUserOrders(@PathVariable Integer userId) {
-        List<Order> orders = orderService.getUserOrders(userId);
-        return Result.success(orders);
+    public Result<List<Order>> getUserOrders(@PathVariable Long userId) {
+        return Result.success(orderService.getUserOrders(userId));
+    }
+
+    @GetMapping("/detail/{orderNo}")
+    public Result<Order> getOrderDetail(@PathVariable String orderNo) {
+        return Result.success(orderService.getOrderByNo(orderNo));
     }
 }

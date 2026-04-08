@@ -18,13 +18,13 @@ public class ScheduleController {
     private ScheduleService scheduleService;
 
     @GetMapping("/movie/{movieId}")
-    public Result<List<Map<String, Object>>> getSchedulesByMovie(@PathVariable Integer movieId) {
+    public Result<List<Map<String, Object>>> getSchedulesByMovie(@PathVariable Long movieId) {
         List<Map<String, Object>> schedules = scheduleService.getSchedulesByMovie(movieId);
         return Result.success(schedules);
     }
 
     @GetMapping("/{id}")
-    public Result<Schedule> getScheduleById(@PathVariable Integer id) {
+    public Result<Schedule> getScheduleById(@PathVariable Long id) {
         Schedule schedule = scheduleService.getScheduleById(id);
         return Result.success(schedule);
     }

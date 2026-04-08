@@ -12,20 +12,26 @@ import java.util.List;
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private Long id;
 
     @Column(nullable = false, unique = true)
-    private String account; // 账号
+    private String account;
     
     @Column(nullable = false)
-    private String password; // 密码
+    private String password;
     
+    @Column(nullable = false)
     private String nickname;
-    private String phone;
-    private String avatar;
-    private String bio; // 个性签名
 
-    @Convert(converter = JsonListConverter.class)
-    @Column(columnDefinition = "JSON")
-    private List<Integer> selected = new ArrayList<>(); // 收藏的电影ID列表 (JSON)
+    @Column(unique = true)
+    private String phone;
+
+    @Column(name = "avatar_url")
+    private String avatarUrl;
+
+    @Column(columnDefinition = "TEXT")
+    private String bio;
+
+    @Column(name = "created_at", insertable = false, updatable = false)
+    private java.util.Date createdAt;
 }

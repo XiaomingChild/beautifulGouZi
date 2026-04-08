@@ -2,11 +2,11 @@
   <div class="rank-block">
     <div class="rank-head">
       <h3>高分排行</h3>
-      <span class="rank-tag">Top 10</span>
+      <span class="rank-tag">Top 20</span>
     </div>
     <ol class="rank-list">
       <li
-        v-for="(item, index) in ranking"
+        v-for="(item, index) in ranking.slice(0, 20)"
         :key="item.id"
         class="rank-item"
         :class="{ highlight: index === 0 }"

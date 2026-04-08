@@ -3,6 +3,7 @@ package com.heavenfilms.backend.entity;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import lombok.Data;
+import java.math.BigDecimal;
 import java.util.Date;
 
 @Data
@@ -10,22 +11,43 @@ import java.util.Date;
 @Table(name = "orders")
 public class Order {
     @Id
-    private String id; // 订单号，建议用时间戳生成
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    @Column(name = "user_id")
-    private Integer userId;
+    @Column(name = "order_no", nullable = false, unique = true)
+    private String orderNo;
 
-    @Column(name = "schedule_id")
-    private Integer scheduleId;
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
 
-    private String seats; // 已选座位，逗号分隔，如 "3排5座,3排6座"
-    
-    @Column(name = "total_price")
-    private Double totalPrice;
+    @Column(name = "schedule_id", nullable = false)
+    private Long scheduleId;
 
-    private Integer status; // 1:已支付, 2:待支付, 3:已取消
+    @Column(name = "total_price", nullable = false, precision = 10, scale = 2)
+    private BigDecimal totalPrice;
+
+    @Column(name = "seat_info", nullable = false)
+    private String seatInfo;
+
+    @Column(name = "ticket_code")
+    private String ticketCode;
+
+    private Integer status; // 0:待支付, 1:已支付, 2:已完成, 3:已取消
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
-    @Column(name = "created_at")
-    private Date createdAt;
+    @Column(name = "create_time", insertable = false, updatable = false)
+    private Date createTime;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    @Column(name = "pay_time")
+    private Date payTime;
+
+    // 关联映射
+    @ManyToOne
+    @JoinColumn(name = "schedule_id", insertable = false, updatable = false)
+    private Schedule schedule;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id", insertable = false, updatable = false)
+    private User user;
 }

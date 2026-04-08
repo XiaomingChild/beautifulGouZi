@@ -9,9 +9,25 @@ import lombok.Data;
 public class Cinema {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private Long id;
 
+    @Column(nullable = false)
     private String name;
+
+    @Column(nullable = false)
     private String address;
-    private String tags; // 以逗号分隔，如 "IMAX,退票,改签"
+
+    private String city;
+
+    private String district;
+
+    private String phone;
+
+    @Column(precision = 3, scale = 1)
+    private java.math.BigDecimal rating;
+
+    @Column(name = "img_url")
+    private String imgUrl;
+
+    private String services;
 }

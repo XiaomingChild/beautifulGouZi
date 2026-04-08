@@ -60,10 +60,10 @@
                   v-for="sc in item.schedules" 
                   :key="sc.id" 
                   class="sc-item"
-                  @click="goSeatSelection(sc)"
+                  @click="goSeatSelection(sc, item.cinema.name)"
                 >
                   <div class="time">{{ formatTime(sc.startTime) }}</div>
-                  <div class="hall">{{ sc.hallName }}</div>
+                  <div class="hall">{{ sc.hall?.name || '普通厅' }}</div>
                   <div class="price">￥{{ sc.price }}</div>
                   <button class="buy-btn">选座购票</button>
                 </div>
@@ -102,7 +102,7 @@ const movie = ref<Movie | null>(null);
 const cinemaSchedules = ref<Array<{ cinema: Cinema; schedules: Schedule[] }>>([]);
 
 const isFavorited = computed(() => {
-  return userStore.state.selected?.includes(movieId) || false;
+  return userStore.state.favoriteMovieIds?.includes(movieId) || false;
 });
 
 const loadData = async () => {
@@ -128,10 +128,10 @@ const formatDate = (dateStr: string) => {
   return new Date(dateStr).toLocaleDateString('zh-CN');
 };
 
-const formatTime = (dateStr: string) => {
-  if (!dateStr) return '';
-  const date = new Date(dateStr);
-  return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
+const formatTime = (timeStr: string) => {
+  if (!timeStr) return '';
+  // 后端返回的是 HH:mm:ss 或 HH:mm
+  return timeStr.substring(0, 5);
 };
 
 const handleToggleFavorite = async () => {
@@ -143,17 +143,20 @@ const handleToggleFavorite = async () => {
 
   try {
     const res = await toggleFavoriteApi(Number(userStore.state.id), movieId);
-    userStore.setUserInfo({ selected: res });
-    ElMessage.success(isFavorited.value ? '已加入收藏' : '已取消收藏');
+    userStore.setUserInfo({ favoriteMovieIds: res });
+    ElMessage.success(isFavorited.value ? '已加入想看' : '已从想看移除');
   } catch (error) {
     console.error('Toggle favorite failed:', error);
   }
 };
 
-const goSeatSelection = (schedule: Schedule) => {
+const goSeatSelection = (schedule: Schedule, cinemaName: string) => {
   router.push({
     path: '/seatSelection',
-    query: { scheduleId: schedule.id }
+    query: { 
+      scheduleId: schedule.id,
+      cinemaName: cinemaName
+    }
   });
 };
 

@@ -5,7 +5,6 @@
   >
     <div class="poster" :style="{ backgroundImage: `url(${movie.posterUrl})` }">
       <span class="rating" v-if="!isUpcoming">{{ movie.rating }}</span>
-      <span class="rating" v-else>想看</span>
       <div 
         v-if="!isUpcoming"
         class="favorite-star" 

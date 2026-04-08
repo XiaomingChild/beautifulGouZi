@@ -47,7 +47,7 @@ public class MovieController {
     }
 
     @GetMapping("/{id}")
-    public Result<Movie> getMovieById(@PathVariable Integer id) {
+    public Result<Movie> getMovieById(@PathVariable Long id) {
         return Result.success(movieService.getMovieById(id));
     }
 
@@ -57,7 +57,7 @@ public class MovieController {
     }
 
     @PostMapping("/list")
-    public Result<List<Movie>> getMoviesByIds(@RequestBody List<Integer> ids) {
+    public Result<List<Movie>> getMoviesByIds(@RequestBody List<Long> ids) {
         return Result.success(movieService.getMoviesByIds(ids));
     }
 }

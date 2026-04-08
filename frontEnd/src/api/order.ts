@@ -1,10 +1,15 @@
 import request from '../utils/request';
-import type { Order } from '../types';
+import type { Order, BookedSeat } from '../types';
 
 /**
  * 创建订单
  */
-export function createOrderApi(data: any) {
+export function createOrderApi(data: {
+  userId: number;
+  scheduleId: number;
+  seatInfo: string;
+  totalPrice: number;
+}) {
   return request<Order>({
     url: '/orders/create',
     method: 'post',
@@ -13,11 +18,21 @@ export function createOrderApi(data: any) {
 }
 
 /**
- * 获取场次已售出的座位
+ * 支付订单
  */
-export function getSoldSeatsApi(scheduleId: number | string) {
-  return request<string[]>({
-    url: `/orders/sold-seats/${scheduleId}`,
+export function payOrderApi(orderNo: string) {
+  return request<string>({
+    url: `/orders/pay/${orderNo}`,
+    method: 'post'
+  });
+}
+
+/**
+ * 获取场次已锁定/售出的座位
+ */
+export function getBookedSeatsApi(scheduleId: number | string) {
+  return request<BookedSeat[]>({
+    url: `/orders/booked-seats/${scheduleId}`,
     method: 'get'
   });
 }
@@ -28,6 +43,16 @@ export function getSoldSeatsApi(scheduleId: number | string) {
 export function getUserOrdersApi(userId: number) {
   return request<Order[]>({
     url: `/orders/user/${userId}`,
+    method: 'get'
+  });
+}
+
+/**
+ * 获取订单详情
+ */
+export function getOrderDetailApi(orderNo: string) {
+  return request<Order>({
+    url: `/orders/detail/${orderNo}`,
     method: 'get'
   });
 }

@@ -249,8 +249,8 @@ watch(() => route.query.status, (newStatus) => {
 
   .movie-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 30px;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 25px; // 稍微缩小间距以适应 5 列布局
     .movie-card {
       background: #fff; border-radius: 12px; overflow: hidden; cursor: pointer;
       transition: all 0.3s;

@@ -23,10 +23,10 @@ public class ScheduleServiceImpl implements ScheduleService {
     private CinemaRepository cinemaRepository;
 
     @Override
-    public List<Map<String, Object>> getSchedulesByMovie(Integer movieId) {
+    public List<Map<String, Object>> getSchedulesByMovie(Long movieId) {
         List<Schedule> allSchedules = scheduleRepository.findByMovieIdOrderByStartTimeAsc(movieId);
 
-        Map<Integer, List<Schedule>> groupedByCinema = allSchedules.stream()
+        Map<Long, List<Schedule>> groupedByCinema = allSchedules.stream()
                 .collect(Collectors.groupingBy(Schedule::getCinemaId));
 
         return groupedByCinema.entrySet().stream().map(entry -> {
@@ -39,7 +39,7 @@ public class ScheduleServiceImpl implements ScheduleService {
     }
 
     @Override
-    public Schedule getScheduleById(Integer id) {
+    public Schedule getScheduleById(Long id) {
         return scheduleRepository.findById(id).orElse(null);
     }
 }
